@@ -196,7 +196,7 @@ def comp_mean_com_velocity(FS, Delta_T = 0.0):
     
     return U 
 
-def get_point_trajectory(FS, point = 'head'):
+def get_point_trajectory(FS, point = 'head', undu_plane = 'xy'):
     
     # check if motion is planar
     tol = 1e-3    
@@ -208,8 +208,24 @@ def get_point_trajectory(FS, point = 'head'):
     elif point == 'midpoint':
         point_idx = int(FS.x.shape[2]/2)
         
-    # Head positions
+    # Head/tale or midpoint coordinates
     X = FS.x[:, :, point_idx]  
+
+    if undu_plane == 'xy':    
+        assert np.all(FS.x[:,2,:] < tol), 'locomotion is not planar'
+        X_1 = X[:, 0]
+        X_2 = X[:, 1]    
+        return X_1, X_2
+    elif undu_plane == 'xz':        
+        assert np.all(FS.x[:,1,:] < tol), 'locomotion is not planar'
+        X_1 = X[:, 0]
+        X_2 = X[:, 2]        
+        return X_1, X_2        
+    elif undu_plane == 'yz':
+        assert np.all(FS.x[:,0,:] < tol), 'locomotion is not planar'
+        X_1 = X[:, 1]
+        X_2 = X[:, 2]
+        return X_1, X_2        
         
     return X
     
