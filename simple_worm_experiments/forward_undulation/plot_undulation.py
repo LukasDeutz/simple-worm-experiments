@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.cm import get_cmap
 import numpy as np
 # Local imports
-from experiments.forward_undulation.undulation import get_point_trajectory, compute_com, comp_mean_com_velocity, comp_midline_error
+from simple_worm_experiments.util import get_point_trajectory, compute_com, comp_mean_com_velocity, comp_midline_error
 from simple_worm.util_experiments import color_list_from_values
 
 #===============================================================================
