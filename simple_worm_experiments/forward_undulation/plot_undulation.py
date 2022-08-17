@@ -76,7 +76,6 @@ def plot_center_of_mass_velocity(ax, FS_arr, color_list = color_list):
     return
 
 def plot_mean_center_of_mass_velocity(ax, FS_arr, key, val_arr, Delta_T = 0.3, semilogx = False):
-
     
     U_arr = []
     
