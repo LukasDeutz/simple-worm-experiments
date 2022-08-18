@@ -17,11 +17,12 @@ import numpy as np
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import pickle
-from parameter_scan.util import dict_hash
+from parameter_scan.util import dict_hash, load_file
 
 # Local imports
 from simple_worm.model_parameters import PhysicalParameters, ModelParameters, PP_KEYS, MP_KEYS, MODP_KEYS
 from simple_worm.rod.solver import Solver, SOLVER_KEYS
+from test.support import get_attribute
 
 
 #------------------------------------------------------------------------------ 
@@ -84,9 +85,41 @@ def save_output(data_path, fn, FS, MP, CS, parameter, save = 'min'):
         output['pic'] = FS.pic
                                                             
     pickle.dump(output, open(data_path + '/simulations/' + fn + '.dat', 'wb'))
+    
+
+def get_filename_from_PG_arr(PG_arr):
+        
+    return '_'.join([PG.filename for PG in PG_arr]) + '.dat'   
+    
        
-       
-       
+def write_sim_data_to_file(data_path, PG_arr, output_keys, file_path = None, prefix = ''):
+
+    data_dict = {}
+                                            
+    if file_path is None:        
+        file_path = data_path + get_filename_from_PG_arr(PG_arr)
+                                            
+    for PG in PG_arr:
+        
+        hash_arr = PG.hash_arr
+        data = {key : [] for key in output_keys}
+        
+        for _hash in hash_arr:
+
+            file = load_file(data_path, _hash, prefix = prefix)
+            FS = file['FS']
+                            
+            for key in output_keys: 
+            
+                data[key].append(getattr(FS, key))
+
+        data_dict[PG.filename] = data
+                                                                        
+    with open(file_path, 'wb') as outfile:
+        pickle.dump(data_dict, outfile, pickle.HIGHEST_PROTOCOL)                
+            
+    return file_path
+                   
 #===============================================================================
 # Post processing
 
@@ -126,7 +159,7 @@ def frame_trafo(v_mat, FS, trafo = 'l2b'):
                 v_mat_bar[i, :, j] = np.matmul(Q.T, v)
                     
     return v_mat_bar
-        
+                            
 #===============================================================================
 # Simulation parameter
 
