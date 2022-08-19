@@ -117,6 +117,8 @@ def test_planar_turn():
         
     FS, CS, _ = PTE.simulate_planar_turn(parameter)
     
+    print(f'Picard iteration converged at every time step: {np.all(FS.pic)}')
+        
     CS = CS.to_numpy()
     
     generate_interactive_scatter_clip(FS, 500, perspective = 'xy', n_arrows = 50) # n_arrows= 65                               
