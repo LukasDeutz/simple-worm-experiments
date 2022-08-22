@@ -17,7 +17,7 @@ import numpy as np
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import pickle
-from parameter_scan.util import dict_hash, load_file
+from parameter_scan.util import dict_hash, load_file, load_file_grid
 
 # Local imports
 from simple_worm.model_parameters import PhysicalParameters, ModelParameters, PP_KEYS, MP_KEYS, MODP_KEYS
@@ -119,6 +119,22 @@ def write_sim_data_to_file(data_path, PG_arr, output_keys, file_path = None, pre
         pickle.dump(data_dict, outfile, pickle.HIGHEST_PROTOCOL)                
             
     return file_path
+
+def check_if_pic(data_path, PG):
+    '''
+    
+    :param data_path: data path of simulations files
+    :param PG: Parameter grid
+    '''
+    
+    file_grid = load_file_grid(PG.hash_grid, data_path)
+    file_arr = file_grid.flatten()
+    
+    pic_arr = np.concatenate([file['FS'].pic for file in file_arr])
+        
+    print(f'PI-solver converged at every time step of every simulation: {np.all(pic_arr.flatten())}')
+    
+    return np.all(pic_arr.flatten())
                    
 #===============================================================================
 # Post processing
@@ -243,22 +259,26 @@ def dimensionless_MP(parameter):
 #===============================================================================
 # Analyse simulation results 
 
-def compute_com(FS, dt):
+def compute_com(x, dt):
     '''Compute the center of mass and its velocity as a function of time'''
         
-    x_com = np.mean(FS.x, axis = 2)
+    x_com = np.mean(x, axis = 2)
         
     v_com_vec = np.gradient(x_com, dt, axis=0, edge_order=1)    
     v_com = np.sqrt(np.sum(v_com_vec**2, axis = 1))
 
     return x_com, v_com, v_com_vec 
 
-def comp_mean_com_velocity(FS, Delta_T = 0.0):
+def comp_mean_com_velocity(x, t, Delta_T = 0.0):
+    '''
     
-    t = np.array(FS.times)
+    :param x: centreline coordinates
+    :param t: time
+    :param Delta_T: crop timepoints t < Delta_T
+    '''    
     dt = t[1] - t[0] 
 
-    _, v_com, _ = compute_com(FS, dt)
+    _, v_com, _ = compute_com(x, dt)
                 
     v = v_com[t >= Delta_T]
     
