@@ -244,7 +244,7 @@ def wrap_simulate_planar_turn(parameter, data_path, _hash, overwrite = False, sa
                 json.dump(parameter, f, indent=4)    
             return
         
-    save_output(FS, MP, CS, parameter, save)
+    save_output(data_path, fn, FS, MP, CS, parameter, save = save)
 
     return
     
