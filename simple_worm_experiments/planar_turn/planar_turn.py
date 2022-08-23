@@ -204,20 +204,20 @@ class PlanarTurnExperiment():
             C = ControlsFenics(k_func, self.sig_func)
                                             
             C_arr.append(C)
-        
+                    
         CS = ControlSequenceFenics(C_arr)
         CS.rod  = self.worm
         
         return CS
     
-    def simulate_planar_turn(self, parameter):            
+    def simulate_planar_turn(self, parameter, F0 = None):            
 
         T = parameter['T']
-                                                                                                                                    
+                                                                                                                                            
         MP = dimensionless_MP(parameter)
         CS = self.planar_turn_CS(parameter)
                             
-        FS = self.worm.solve(T, CS=CS, MP = MP) 
+        FS = self.worm.solve(T, CS=CS, MP = MP, F0 = F0) 
                                   
         return FS, CS, MP
 
