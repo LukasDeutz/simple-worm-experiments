@@ -4,13 +4,10 @@ Created on 25 May 2022
 @author: lukas
 '''
 # Build-in imports
-import copy
-import itertools as it
 from os.path import isfile
-from multiprocessing import Pool
 import json
 import traceback
-import pickle
+import sys
 
 # Third-party imports
 import numpy as np
@@ -210,18 +207,25 @@ class PlanarTurnExperiment():
         
         return CS
     
-    def simulate_planar_turn(self, parameter, F0 = None):            
+    def simulate_planar_turn(self, parameter, F0 = None, try_block = False):            
 
         T = parameter['T']
                                                                                                                                             
         MP = dimensionless_MP(parameter)
         CS = self.planar_turn_CS(parameter)
-                            
-        FS = self.worm.solve(T, CS=CS, MP = MP, F0 = F0) 
-                                  
+        
+        if try_block:        
+            try:        
+                FS = self.worm.solve(T, CS=CS, MP = MP, F0 = F0)                                             
+            except Exception as e:            
+                return e
+        
+        else:
+            FS = self.worm.solve(T, CS=CS, MP = MP, F0 = F0)
+                                              
         return FS, CS, MP
 
-def wrap_simulate_planar_turn(parameter, data_path, _hash, overwrite = False, save = 'min', _try = False):
+def wrap_simulate_planar_turn(parameter, data_path, _hash, overwrite = False, save = 'all', _try = True, F0 = None):
 
     fn = _hash 
 
@@ -231,17 +235,20 @@ def wrap_simulate_planar_turn(parameter, data_path, _hash, overwrite = False, sa
             return
         
     PTE = PlanarTurnExperiment(parameter['N'], parameter['dt'], solver = get_solver(parameter))
-                
-    if not _try:
-        FS, CS, MP = PTE.simulate_planar_turn(parameter)
-    
+                            
+    if not _try:        
+        FS, CS, MP = PTE.simulate_planar_turn(parameter, F0 = F0)        
     else:    
         try:        
-            FS, CS, MP = PTE.simulate_planar_turn(parameter)
-        except Exception as e:
-            traceback.print_exception(e)                
-            with open(data_path + '/errors/' + 'error_report_' + _hash + '.json', 'w') as f:        
+            FS, CS, MP = PTE.simulate_planar_turn(parameter, F0 = F0)
+        except Exception:            
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            
+            with open(data_path + '/errors/' + _hash +  '_traceback.txt', 'w') as f:                        
+                traceback.print_exception(exc_type, exc_value, exc_traceback, file=f)                        
+            with open(data_path + '/errors/' + _hash  +  '_parameter ' + '.json', 'w') as f:        
                 json.dump(parameter, f, indent=4)    
+                        
             return
         
     save_output(data_path, fn, FS, MP, CS, parameter, save = save)

@@ -14,6 +14,7 @@ from simple_worm.rod.cosserat_rod_2_test import CosseratRod_2
 from simple_worm.controls.controls import ControlsFenics 
 from simple_worm.controls.control_sequence import ControlSequenceFenics
 from simple_worm_experiments.util import dimensionless_MP, default_solver, get_solver, save_output
+import sys
 
 data_path = "../../data/forward_undulation/"
 
@@ -136,7 +137,7 @@ class ForwardUndulationExperiment():
 #------------------------------------------------------------------------------ 
 # 
 
-def wrap_simulate_undulation(parameter, data_path, _hash, overwrite = False, save = 'min', _try = False):
+def wrap_simulate_undulation(parameter, data_path, _hash, overwrite = False, save = 'all', _try = True):
 
     fn = _hash 
 
@@ -153,12 +154,15 @@ def wrap_simulate_undulation(parameter, data_path, _hash, overwrite = False, sav
     else:    
         try:        
             FS, CS, MP = FU.simulate_undulation(parameter)
-        except Exception as e:
-            traceback.print_exception(e)                
-            with open(data_path + '/errors/' + 'error_report_' + _hash + '.json', 'w') as f:        
+        except Exception:
+
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            
+            with open(data_path + '/errors/' + _hash +  '_traceback.txt', 'w') as f:                        
+                traceback.print_exception(exc_type, exc_value, exc_traceback, file=f)                        
+            with open(data_path + '/errors/' + _hash  +  '_parameter ' + '.json', 'w') as f:        
                 json.dump(parameter, f, indent=4)    
-            return
-        
+
     save_output(data_path, fn, FS, MP, CS, parameter, save)
 
     return
