@@ -161,7 +161,9 @@ def wrap_simulate_undulation(parameter, data_path, _hash, overwrite = False, sav
             with open(data_path + '/errors/' + _hash +  '_traceback.txt', 'w') as f:                        
                 traceback.print_exception(exc_type, exc_value, exc_traceback, file=f)                        
             with open(data_path + '/errors/' + _hash  +  '_parameter ' + '.json', 'w') as f:        
-                json.dump(parameter, f, indent=4)    
+                json.dump(parameter, f, indent=4)  
+                
+            return  
 
     save_output(data_path, fn, FS, MP, CS, parameter, save)
 

@@ -122,7 +122,9 @@ def write_sim_data_to_file(data_path, PG_arr, output_keys, file_path = None, pre
 
 def check_if_pic(data_path, PG):
     '''
-    
+    Checks if the picard iteration for all time steps
+    and all frame sequences for given parameter grid    
+        
     :param data_path: data path of simulations files
     :param PG: Parameter grid
     '''
