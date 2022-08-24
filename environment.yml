@@ -9,6 +9,6 @@ dependencies:
   - fenics = 2019.1.0
   - numpy = 1.19
   - scikit-learn = 0.24
-  - matplotlib = 3.5.1
+  - matplotlib = 3.4.3
   
   
