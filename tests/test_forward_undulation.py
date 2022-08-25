@@ -3,6 +3,7 @@ from os.path import isfile
 
 # Third party imports
 import matplotlib.pyplot as plt
+import numpy as np
 
 # Local imports
 from simple_worm.plot3d import generate_interactive_scatter_clip
@@ -93,24 +94,26 @@ def test_forward_undulation():
         
     solver = get_solver(parameter)
     
-    FU = ForwardUndulationExperiment(parameter['N'], parameter['dt'], solver = solver)
+    FU = ForwardUndulationExperiment(parameter['N'], parameter['dt'], solver = solver, quiet=True)
     
     FS, CS, _ = FU.simulate_undulation(parameter)
     
     print(f'Picard iteration converged at every time step: {np.all(FS.pic)}')
+            
+    if False:    
         
-    CS = CS.to_numpy()
-    
-    generate_interactive_scatter_clip(FS, 500, perspective = 'xy', n_arrows = 50) # n_arrows= 65                               
-    
-    # plot_controls_CS_vs_FS(CS.to_numpy(), FS, parameter['dt'])    
-    
-    k0 = CS.Omega[:, 0, :]
-    k = FS.Omega[:, 0, :]        
+        CS = CS.to_numpy()
         
-    plot_single_strain_vs_control(k0, k, dt = parameter['dt'], titles = [r'$\kappa_{2,0}$', r'$\kappa_{2}$'], cbar_format='%.1f', cmap = plt.get_cmap('plasma'))        
-    plot_trajectory(FS, parameter)
-    plt.show()
+        generate_interactive_scatter_clip(FS, 500, perspective = 'xy', n_arrows = 50) # n_arrows= 65                               
+    
+        plot_controls_CS_vs_FS(CS.to_numpy(), FS, parameter['dt'])    
+    
+        k0 = CS.Omega[:, 0, :]
+        k = FS.Omega[:, 0, :]        
+        
+        plot_single_strain_vs_control(k0, k, dt = parameter['dt'], titles = [r'$\kappa_{2,0}$', r'$\kappa_{2}$'], cbar_format='%.1f', cmap = plt.get_cmap('plasma'))        
+        plot_trajectory(FS, parameter)
+        plt.show()
     
     return
                                   

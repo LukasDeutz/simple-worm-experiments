@@ -26,7 +26,7 @@ fig_path = "../../fig/experiments/planar_turn/"
 
 class PlanarTurnExperiment():
 
-    def __init__(self, N, dt, solver = None):
+    def __init__(self, N, dt, solver = None, quiet = False):
     
     
         self.N = N
@@ -37,11 +37,9 @@ class PlanarTurnExperiment():
             
         self.solver = solver
 
-        self.worm = CosseratRod_2(self.N, dt, self.solver)                                                        
+        self.worm = CosseratRod_2(self.N, dt, self.solver, quiet=quiet)                                                        
         
-
         self.s_arr = np.linspace(0, 1, self.N)
-
 
         self.sig_arr = np.zeros((3, self.N))
         self.sig_func = Function(self.worm.function_spaces['sigma'])

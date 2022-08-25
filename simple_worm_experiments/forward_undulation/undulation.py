@@ -25,14 +25,14 @@ KINEMATIC_KEYS = ['lam', 'C_t', 'K']
 
 class ForwardUndulationExperiment():
     
-    def __init__(self, N, dt, solver = None):
+    def __init__(self, N, dt, solver = None, quiet = False):
         
         
         if solver is None:
             solver = default_solver()
             
         self.solver = solver
-        self.worm = CosseratRod_2(N, dt, self.solver)
+        self.worm = CosseratRod_2(N, dt, self.solver, quiet = quiet)
                             
     def undulation_control_sequence(self, parameter):
         
