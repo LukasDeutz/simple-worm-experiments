@@ -1,9 +1,7 @@
 
 # Build-in imports
 import copy
-from os.path import isfile
-import json
-import traceback
+from os.path import isfile, join
 
 # Third party imports
 from fenics import Expression, Function
@@ -14,7 +12,8 @@ from simple_worm.rod.cosserat_rod_2_test import CosseratRod_2
 from simple_worm.controls.controls import ControlsFenics 
 from simple_worm.controls.control_sequence import ControlSequenceFenics
 from simple_worm_experiments.util import dimensionless_MP, default_solver, get_solver, save_output
-import sys
+
+from mp_progress_logger import FWException
 
 data_path = "../../data/forward_undulation/"
 
@@ -116,6 +115,8 @@ class ForwardUndulationExperiment():
         
     def simulate_undulation(self, 
                             parameter, 
+                            pbar = None,
+                            logger = None,
                             init_posture = False):            
 
 
@@ -130,44 +131,79 @@ class ForwardUndulationExperiment():
         else:
             F0 = None
                     
-        FS = self.worm.solve(T, CS=CS, MP = MP, F0 = F0) 
+        FS, e = self.worm.solve(T, MP, CS, F0, pbar, logger) 
+
+        CS = CS.to_numpy()
                                   
-        return FS, CS, MP
+        return FS, CS, MP, e
 
 #------------------------------------------------------------------------------ 
 # 
 
-def wrap_simulate_undulation(parameter, data_path, _hash, overwrite = False, save = 'all', _try = True):
-
-    fn = _hash 
-
-    if not overwrite:    
-        if isfile(data_path + 'simulations/' + fn + '.dat'):
-            print('File already exists')
-            return
-        
-    FU = ForwardUndulationExperiment(parameter['N'], parameter['dt'], solver = get_solver(parameter))
-                
-    if not _try:
-        FS, CS, MP = FU.simulate_undulation(parameter)
+def wrap_simulate_undulation(_input, 
+                             pbar,
+                             logger,
+                             task_number,                             
+                             output_dir,  
+                             overwrite  = False, 
+                             save_keys = None,                              
+                             ):
+    '''
+    Saves simulations results to file
     
-    else:    
-        try:        
-            FS, CS, MP = FU.simulate_undulation(parameter)
-        except Exception:
+    
+    :param _input (tuple): parameter dictionary and hash
+    :param pbar (tqdm.tqdm): progressbar
+    :param logger (logging.Logger): Logger
+    :param task_number (int):
+    :param output_dir (str): result directory
+    :param overwrite (bool): If true, exisiting files are overwritten
+    :param save_keys (list): List of attributes which will saved to the result file.
+    If None, then all files get saved.
+    '''
 
-            exc_type, exc_value, exc_traceback = sys.exc_info()
+
+    parameter, _hash = _input[0], _input[1]
+    
+    filepath = join(output_dir, _hash + '.dat')
             
-            with open(data_path + '/errors/' + _hash +  '_traceback.txt', 'w') as f:                        
-                traceback.print_exception(exc_type, exc_value, exc_traceback, file=f)                        
-            with open(data_path + '/errors/' + _hash  +  '_parameter ' + '.json', 'w') as f:        
-                json.dump(parameter, f, indent=4)  
+    if not overwrite:    
+        if isfile(filepath):
+            logger.info(f'Task {task_number}: File already exists')
+                    
+    N = parameter['N']
+    dt = parameter['dt']
+        
+    FU = ForwardUndulationExperiment(N, dt, solver = get_solver(parameter), quiet = True)
+    
+                    
+    FS, CS, MP, e = FU.simulate_undulation(parameter, pbar, logger)
+
+    if e is not None:
+        exit_status = 1
+    else:
+        exit_status = 0
                 
-            return  
+    # Regardless if simulation has finished or failed, simulation results
+    # up to this point are saved to file         
+    save_output(filepath, FS, CS, MP, parameter, exit_status, save_keys)                        
+    logger.info(f'Task {task_number}: Saved file to {filepath}.')         
+                
+    # If the simulation has failed then we reraise the exception
+    # which has been passed upstream        
+    if e is not None:                    
+        raise FWException(FS.pic, parameter['T'], parameter['dt'], FS.times[-1]) from e
+        
+    # If simulation has finished succesfully then we return the relevant results 
+    # for the logger
+    result = {}    
+    result['pic'] = FS.pic
+    
+    return result
+    
+                
 
-    save_output(data_path, fn, FS, MP, CS, parameter, save)
-
-    return
+    
 
 
     
