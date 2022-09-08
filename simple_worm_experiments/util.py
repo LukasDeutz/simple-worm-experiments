@@ -8,7 +8,7 @@ Created on 28 Jun 2022
 # Build-in importsO
 import itertools as it
 from multiprocessing import Pool
-from os.path import isfile
+from os.path import isfile, join
 import traceback
 import json
 import numpy as np
@@ -22,13 +22,18 @@ from parameter_scan.util import dict_hash, load_file, load_file_grid
 # Local imports
 from simple_worm.model_parameters import PhysicalParameters, ModelParameters, PP_KEYS, MP_KEYS, MODP_KEYS
 from simple_worm.rod.solver import Solver, SOLVER_KEYS
-from test.support import get_attribute
-
 
 #------------------------------------------------------------------------------ 
 # Simulation 
 
-def simulate_batch_parallel(N_worker, data_path, func, PG, overwrite = False, save = 'all', _try = True):
+def simulate_batch_parallel(N_worker, 
+                            data_path, 
+                            func, 
+                            PG, 
+                            overwrite = False, 
+                            save = 'all', 
+                            _try = True, 
+                            quiet = False):
     '''
     Simulate undulation experiment for all parameter dictionaries in grid
     
@@ -40,6 +45,7 @@ def simulate_batch_parallel(N_worker, data_path, func, PG, overwrite = False, sa
     :param overwrite: Overwrite already existing simulation results
     :param save: Output   
     :param _try: If true, then the simulation is run I try block
+    :param quiet: If true, solver does not print progress
     '''        
         
     # Simulate using N cores in parallel 
@@ -51,7 +57,8 @@ def simulate_batch_parallel(N_worker, data_path, func, PG, overwrite = False, sa
                      PG.hash_arr, 
                      it.repeat(overwrite), 
                      it.repeat(save),
-                     it.repeat(_try)))
+                     it.repeat(_try),
+                     it.repeat(quiet)))
         
     return
 
@@ -63,29 +70,48 @@ def load_data(prefix, data_path, parameter, encoding = 'rb'):
     
     return data
 
-def save_output(data_path, fn, FS, MP, CS, parameter, save = 'min'):
+def save_output(filepath, 
+                FS, 
+                CS, 
+                MP, 
+                parameter, 
+                exit_status = 1,
+                save_keys = None):
+    '''
+    Save simulation results
+    
+    :param filepath (str):
+    :param filename (str):
+    :param FS (FrameSequenceNumpy):
+    :param CS (ControlSequenceNumpy):
+    :param MP (...):
+    :param parameter (dict):
+    :param exit_status (int): if 0, then the simulation finished succesfully, if 1, error occured  
+    :param save_keys (dict):
+    '''
 
     output = {}
 
     output['parameter'] = parameter
     output['MP'] = MP
+    output['exit_status'] = exit_status
         
-    if save == 'all':    
+    if save_keys is None:    
         
         output['FS'] = FS        
-        output['CS'] = CS.to_numpy()
+        output['CS'] = CS
     
-    elif save == 'min':
-                
-        output['x'] = FS.x
-        output['x_t'] = FS.x_t
-        output['k'] = FS.Omega
-        output['k0'] = CS.Omega
-        output['t'] = FS.times
-        output['pic'] = FS.pic
-                                                            
-    pickle.dump(output, open(data_path + '/simulations/' + fn + '.dat', 'wb'))
+    else:
+        for key in save_keys:
+        
+            output[key] = getattr(FS, key)
+                     
+    with open(filepath, 'wb') as file:
+                                                                            
+        pickle.dump(output, file)
     
+    return
+
 
 def get_filename_from_PG_arr(PG_arr):
         
