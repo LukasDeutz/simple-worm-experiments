@@ -176,7 +176,9 @@ def wrap_simulate_undulation(_input,
                         
             exit_status = output['exit_status'] 
             
-            if ~exit_status:
+            print(exit_status)
+            
+            if exit_status:
                 raise FWException(FS.pic, parameter['T'], parameter['dt'], FS.times[-1])
             
             result = {}
