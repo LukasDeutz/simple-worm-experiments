@@ -2,6 +2,7 @@
 # Build-in imports
 import copy
 from os.path import isfile, join
+import pickle
 
 # Third party imports
 from fenics import Expression, Function
@@ -11,7 +12,7 @@ import numpy as np
 from simple_worm.rod.cosserat_rod_2_test import CosseratRod_2
 from simple_worm.controls.controls import ControlsFenics 
 from simple_worm.controls.control_sequence import ControlSequenceFenics
-from simple_worm_experiments.util import dimensionless_MP, default_solver, get_solver, save_output
+from simple_worm_experiments.util import dimensionless_MP, default_solver, get_solver, save_output, load_data
 
 from mp_progress_logger import FWException
 
@@ -169,8 +170,20 @@ def wrap_simulate_undulation(_input,
             
     if not overwrite:    
         if isfile(filepath):
-            logger.info(f'Task {task_number}: File already exists')
-                    
+            logger.info(f'Task {task_number}: File already exists')                                    
+            output = pickle.load(open(join(output_dir, _hash + '.dat'), 'rb'))
+            FS = output['FS']
+                        
+            exit_status = output['exit_status'] 
+            
+            if ~exit_status:
+                raise FWException(FS.pic, parameter['T'], parameter['dt'], FS.times[-1])
+            
+            result = {}
+            result['pic'] = FS.pic
+            
+            return result
+    
     N = parameter['N']
     dt = parameter['dt']
         
