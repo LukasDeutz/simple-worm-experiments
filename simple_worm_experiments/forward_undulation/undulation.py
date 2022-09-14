@@ -204,8 +204,20 @@ def wrap_simulate_undulation(_input,
                 
     # If the simulation has failed then we reraise the exception
     # which has been passed upstream        
-    if e is not None:                    
-        raise FWException(FS.pic, parameter['T'], parameter['dt'], FS.times[-1]) from e
+    if e is not None:
+        
+        pic_rate = np.sum(FS.pic) / len(FS.pic)
+                            
+        if len(FS.pic) > 10:
+            pic_arr = FS.pic[-10:]
+        else:
+            pic_arr = FS.pic
+        
+        raise FWException(pic_arr, 
+                          pic_rate, 
+                          parameter['T'], 
+                          parameter['dt'], 
+                          FS.times[-1]) from e
         
     # If simulation has finished succesfully then we return the relevant results 
     # for the logger
