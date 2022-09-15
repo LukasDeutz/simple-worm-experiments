@@ -4,10 +4,8 @@ Created on 25 May 2022
 @author: lukas
 '''
 # Build-in imports
-from os.path import isfile
-import json
-import traceback
-import sys
+from os.path import isfile, join
+import pickle
 
 # Third-party imports
 import numpy as np
@@ -19,9 +17,9 @@ from simple_worm.controls import ControlsFenics, ControlSequenceFenics
 from simple_worm_experiments.util import default_solver, get_solver, dimensionless_MP, save_output
 from simple_worm.util import v2f
 
+from mp_progress_logger import FWException
+
 data_path = "../../data/planar_turn/"
-
-
 fig_path = "../../fig/experiments/planar_turn/"
 
 class PlanarTurnExperiment():
@@ -205,53 +203,98 @@ class PlanarTurnExperiment():
         
         return CS
     
-    def simulate_planar_turn(self, parameter, F0 = None, try_block = False):            
+    def simulate_planar_turn(self, parameter, pbar, logger):            
 
         T = parameter['T']
                                                                                                                                             
         MP = dimensionless_MP(parameter)
         CS = self.planar_turn_CS(parameter)
         
-        if try_block:        
-            try:        
-                FS = self.worm.solve(T, CS=CS, MP = MP, F0 = F0)                                             
-            except Exception as e:            
-                return e
+        #TODO: Do we need an initial configuration
+        F0 = None
         
-        else:
-            FS = self.worm.solve(T, CS=CS, MP = MP, F0 = F0)
+        FS, e = self.worm.solve(T, MP, CS, F0, pbar, logger)                                             
+        
+        CS = CS.to_numpy()
                                               
-        return FS, CS, MP
+        return FS, CS, MP, e
 
-def wrap_simulate_planar_turn(parameter, data_path, _hash, overwrite = False, save = 'all', _try = True, F0 = None):
+def wrap_simulate_planar_turn(_input, 
+                              pbar,
+                              logger,
+                              task_number,
+                              output_dir, 
+                              overwrite = False, 
+                              save_keys = None,
+                              ):
 
-    fn = _hash 
-
-    if not overwrite:    
-        if isfile(data_path + 'simulations/' + fn + '.dat'):
-            print('File already exists')
-            return
+    '''
+    Wrapper function for planar turn experiments. Saves simulations results to file
         
-    PTE = PlanarTurnExperiment(parameter['N'], parameter['dt'], solver = get_solver(parameter))
-                            
-    if not _try:        
-        FS, CS, MP = PTE.simulate_planar_turn(parameter, F0 = F0)        
-    else:    
-        try:        
-            FS, CS, MP = PTE.simulate_planar_turn(parameter, F0 = F0)
-        except Exception:            
-            exc_type, exc_value, exc_traceback = sys.exc_info()
+    :param _input (tuple): parameter dictionary and hash
+    :param pbar (tqdm.tqdm): progressbar
+    :param logger (logging.Logger): Logger
+    :param task_number (int):
+    :param output_dir (str): result directory
+    :param overwrite (bool): If true, exisiting files are overwritten
+    :param save_keys (list): List of attributes which will saved to the result file.
+    If None, then all files get saved.
+    '''
+
+    parameter, _hash = _input[0], _input[1]
+    
+    filepath = join(output_dir, _hash + '.dat')
             
-            with open(data_path + '/errors/' + _hash +  '_traceback.txt', 'w') as f:                        
-                traceback.print_exception(exc_type, exc_value, exc_traceback, file=f)                        
-            with open(data_path + '/errors/' + _hash  +  '_parameter ' + '.json', 'w') as f:        
-                json.dump(parameter, f, indent=4)    
+    if not overwrite:    
+        if isfile(filepath):
+            logger.info(f'Task {task_number}: File already exists')                                    
+            output = pickle.load(open(join(output_dir, _hash + '.dat'), 'rb'))
+            FS = output['FS']
                         
-            return
+            exit_status = output['exit_status'] 
+                        
+            if exit_status:
+                raise FWException(FS.pic, parameter['T'], parameter['dt'], FS.times[-1])
+            
+            result = {}
+            result['pic'] = FS.pic
+            
+            return result
+    
+    N  = parameter['N']
+    dt = parameter['dt']
         
-    save_output(data_path, fn, FS, MP, CS, parameter, save = save)
+    PTE = PlanarTurnExperiment(N, dt, solver = get_solver(parameter), quiet = True)
+    
+                    
+    FS, CS, MP, e = PTE.simulate_planar_turn(parameter, pbar, logger)
+    
+    if e is not None:
+        exit_status = 1
+    else:
+        exit_status = 0
+                
+    # Regardless if simulation has finished or failed, simulation results
+    # up to this point are saved to file         
+    save_output(filepath, FS, CS, MP, parameter, exit_status, save_keys)                        
+    logger.info(f'Task {task_number}: Saved file to {filepath}.')         
+                
+    # If the simulation has failed then we reraise the exception
+    # which has been passed upstream        
+    if e is not None:                
+        raise FWException(FS.pic, 
+                          parameter['T'], 
+                          parameter['dt'], 
+                          FS.times[-1]) from e
+        
+    # If simulation has finished succesfully then we return the relevant results 
+    # for the logger
+    result = {}    
+    result['pic'] = FS.pic
+    
+    return result
 
-    return
+
     
     
     
