@@ -33,7 +33,7 @@ class GridPoolLoader():
                                 
         for GL in self.GridLoaders:
             
-            print(GL.filename)
+            print(GL.PG.filename)
             GL.add_data_to_h5(h5, FS_keys, CS_keys)
                   
         h5.close()
