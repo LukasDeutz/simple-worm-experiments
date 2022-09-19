@@ -17,6 +17,8 @@ class GridPoolLoader():
     def __init__(self, grid_param_path_list, sim_path):
                                 
         self.GridLoaders = [GridLoader(gpp, sim_path) for gpp in grid_param_path_list]                
+
+        print([GL.PG.filename for GL in self.GridLoaders])
         
     def __len__(self):
         
