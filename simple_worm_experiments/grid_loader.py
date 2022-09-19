@@ -12,7 +12,6 @@ import h5py
 from parameter_scan.util import load_grid_param
 from parameter_scan import ParameterGrid
 
-
 class GridPoolLoader():
                     
     def __init__(self, grid_param_path_list, sim_path):
@@ -63,7 +62,7 @@ class GridLoader():
             return self.PG.v_arr[idx]
                                                                               
     @property                        
-    def sim_filenames(self):
+    def sim_filepaths(self):
 
         return [join(self.sim_path, _hash + '.dat') for _hash in self.PG.hash_arr]
         
@@ -85,9 +84,9 @@ class GridLoader():
         
         output['exit_status'] = []
         
-        for filename in self.sim_filenames: 
+        for filepath in self.sim_filepaths: 
         
-            data = open(join(self.sim_path, filename), 'rb')
+            data = open(filepath, 'rb')
             
             data = pickle.load(data)
 
