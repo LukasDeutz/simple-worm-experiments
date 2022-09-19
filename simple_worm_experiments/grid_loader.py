@@ -29,13 +29,9 @@ class GridPoolLoader():
     def save_data(self, file_path, FS_keys, CS_keys = []):
         
         h5 = h5py.File(file_path, 'w')
-
-        # print([GL.PG.filename for GL in self.GridLoaders])
                                 
         for GL in self.GridLoaders:
-            
-            # print(GL.PG.filename)
-            
+                        
             GL.add_data_to_h5(h5, FS_keys, CS_keys)
                   
         h5.close()
@@ -56,10 +52,8 @@ class GridLoader():
                   
     def _init_PG(self, grid_param_path):
         
-        print(f'grid_path: {grid_param_path}')
         grid_param, base_parameter = load_grid_param(grid_param_path)           
         PG = ParameterGrid(base_parameter, grid_param)
-        print(f'Check grid_path: {PG.filename}')
           
         return PG
     
