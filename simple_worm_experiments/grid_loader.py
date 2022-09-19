@@ -93,7 +93,7 @@ class GridLoader():
             for key in FS_keys: output['FS'][key].append(getattr(data['FS'], key))
             for key in CS_keys: output['CS'][key].append(getattr(data['CS'], key))
             
-            output['exist_status'].append(output['exit_status'])
+            output['exit_status'].append(output['exit_status'])
         
         #TODO: base_parameter                                        
         #output['parameter'] = self.PG.base_parameter
