@@ -96,7 +96,7 @@ class GridLoader():
             for key in FS_keys: output['FS'][key].append(getattr(data['FS'], key))
             for key in CS_keys: output['CS'][key].append(getattr(data['CS'], key))
             
-            output['exit_status'].append(output['exit_status'])
+            output['exit_status'].append(data['exit_status'])
         
         #TODO: base_parameter                                        
         #output['parameter'] = self.PG.base_parameter
@@ -116,9 +116,7 @@ class GridLoader():
 
         for key, arr in output['CS'].items():            
             CS_grp.create_dataset(key, data = arr)
-        
-        
-        
+                        
         #TODO: Save base parameter                
         
         print(f'exit_status: {output["exit_status"]}')
