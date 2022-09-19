@@ -104,6 +104,8 @@ class GridLoader():
         
         output = self.load_data(FS_keys, CS_keys)
 
+        print(self.PG.filename)
+
         PG_grp = h5.create_group(self.PG.filename)                
         FS_grp = PG_grp.create_group('FS')
         CS_grp = PG_grp.create_group('CS')
