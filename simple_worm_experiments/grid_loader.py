@@ -17,8 +17,6 @@ class GridPoolLoader():
     def __init__(self, grid_param_path_list, sim_path):
                                 
         self.GridLoaders = [GridLoader(gpp, sim_path) for gpp in grid_param_path_list]                
-
-        print([GL.PG.filename for GL in self.GridLoaders])
         
     def __len__(self):
         
@@ -32,11 +30,11 @@ class GridPoolLoader():
         
         h5 = h5py.File(file_path, 'w')
 
-        print([GL.PG.filename for GL in self.GridLoaders])
+        # print([GL.PG.filename for GL in self.GridLoaders])
                                 
         for GL in self.GridLoaders:
             
-            print(GL.PG.filename)
+            # print(GL.PG.filename)
             
             GL.add_data_to_h5(h5, FS_keys, CS_keys)
                   
@@ -48,7 +46,12 @@ class GridLoader():
                  grid_param_path, 
                  sim_path):
         
+        print(grid_param_path)
+        
         self.PG = self._init_PG(grid_param_path)
+        
+        print(self.PG.filename)
+        
         self.sim_path = sim_path
                   
     def _init_PG(self, grid_param_path):
