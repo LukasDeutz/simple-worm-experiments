@@ -117,7 +117,11 @@ class GridLoader():
         for key, arr in output['CS'].items():            
             CS_grp.create_dataset(key, data = arr)
         
+        
+        
         #TODO: Save base parameter                
+        
+        print(f'exit_status: {output["exit_status"]}')
         PG_grp.attrs['exits_status'] = output['exit_status']
         
         print('add_data_to_h5')
