@@ -15,11 +15,9 @@ from parameter_scan import ParameterGrid
 class GridPoolLoader():
                     
     def __init__(self, grid_param_path_list, sim_path):
-                        
-        
-        print(grid_param_path_list)
+                                
         self.GridLoaders = [GridLoader(gpp, sim_path) for gpp in grid_param_path_list]                
-
+        
     def __len__(self):
         
         return len(self.GridLoaders)
@@ -31,10 +29,13 @@ class GridPoolLoader():
     def save_data(self, file_path, FS_keys, CS_keys = []):
         
         h5 = h5py.File(file_path, 'w')
+
+        print([GL.PG.filename for GL in self.GridLoaders])
                                 
         for GL in self.GridLoaders:
             
             print(GL.PG.filename)
+            
             GL.add_data_to_h5(h5, FS_keys, CS_keys)
                   
         h5.close()
@@ -53,7 +54,8 @@ class GridLoader():
         print(f'grid_path: {grid_param_path}')
         grid_param, base_parameter = load_grid_param(grid_param_path)           
         PG = ParameterGrid(base_parameter, grid_param)
-           
+        print(f'Check grid_path: {PG.filename}')
+          
         return PG
     
     def v_arr(self, idx, key = None):
@@ -106,8 +108,6 @@ class GridLoader():
     def add_data_to_h5(self, h5, FS_keys, CS_keys = []):
         
         output = self.load_data(FS_keys, CS_keys)
-
-        print(self.PG.filename)
 
         PG_grp = h5.create_group(self.PG.filename)                
         FS_grp = PG_grp.create_group('FS')
