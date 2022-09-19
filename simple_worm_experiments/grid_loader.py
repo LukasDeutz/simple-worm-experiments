@@ -115,7 +115,7 @@ class GridLoader():
             CS_grp.create_dataset(key, data = arr)
         
         #TODO: Save base parameter                
-        PG_grp.attr['exits_status'] = output['exit_status']
+        PG_grp.attrs['exits_status'] = output['exit_status']
 
         return
                 
