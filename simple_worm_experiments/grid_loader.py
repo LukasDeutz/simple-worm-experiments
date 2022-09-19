@@ -15,9 +15,10 @@ from parameter_scan import ParameterGrid
 class GridPoolLoader():
                     
     def __init__(self, grid_param_path_list, sim_path):
+                        
         
-        self.GridLoaders = [GridLoader(gpp, sim_path) for gpp in grid_param_path_list]
-        self.data_list = []
+        print(grid_param_path_list)
+        self.GridLoaders = [GridLoader(gpp, sim_path) for gpp in grid_param_path_list]                
 
     def __len__(self):
         
@@ -49,6 +50,7 @@ class GridLoader():
                   
     def _init_PG(self, grid_param_path):
         
+        print(f'grid_path: {grid_param_path}')
         grid_param, base_parameter = load_grid_param(grid_param_path)           
         PG = ParameterGrid(base_parameter, grid_param)
            
