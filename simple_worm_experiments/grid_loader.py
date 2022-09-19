@@ -28,6 +28,8 @@ class GridPoolLoader():
         return self.GridLoaders[idx].v_arr(key)
               
     def save_data(self, file_path, FS_keys, CS_keys = []):
+
+        print('Save data')
         
         h5 = h5py.File(file_path, 'w')
                                 
@@ -35,6 +37,7 @@ class GridPoolLoader():
             
             GL.add_data_to_h5(h5, FS_keys, CS_keys)
                   
+        print('Finished!')                  
         h5.close()
                                                                                                                    
 class GridLoader():
@@ -97,6 +100,7 @@ class GridLoader():
         
         #TODO: base_parameter                                        
         #output['parameter'] = self.PG.base_parameter
+        data.close()
                                             
         return output
 
@@ -116,6 +120,8 @@ class GridLoader():
         
         #TODO: Save base parameter                
         PG_grp.attrs['exits_status'] = output['exit_status']
+        
+        print('add_data_to_h5')
 
         return
                 
