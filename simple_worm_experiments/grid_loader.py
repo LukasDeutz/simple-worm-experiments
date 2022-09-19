@@ -41,13 +41,8 @@ class GridLoader():
     def __init__(self, 
                  grid_param_path, 
                  sim_path):
-        
-        print(grid_param_path)
-        
-        self.PG = self._init_PG(grid_param_path)
-        
-        print(self.PG.filename)
-        
+                
+        self.PG = self._init_PG(grid_param_path)                
         self.sim_path = sim_path
                   
     def _init_PG(self, grid_param_path):
