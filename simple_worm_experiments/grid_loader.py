@@ -100,7 +100,6 @@ class GridLoader():
         
         #TODO: base_parameter                                        
         #output['parameter'] = self.PG.base_parameter
-        data.close()
                                             
         return output
 
