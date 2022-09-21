@@ -188,9 +188,10 @@ class GridLoader():
                 
     def save_data(self, filepath, FS_keys, CS_keys = []):
         
+        h5 = h5py.File(filepath, 'w')
+        
         output = self.load_data(FS_keys, CS_keys)
         
-        h5 = h5py.File(filepath)
         FS_grp= h5.create_group('FS')
         
         exit_status = output['exit_status']
