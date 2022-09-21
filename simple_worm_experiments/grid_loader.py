@@ -179,7 +179,7 @@ class GridLoader():
                 CS_grp.create_dataset(key, data = arr)
 
             PG_grp.create_dataset('t', data = output['t'])
-            PG_grp.create_dataset('exit_status', data = output['exit_status'])        
+            PG_grp.create_dataset('exit_status', data = exit_status)        
         
         else:
             print(f'Group for grid {self.PG.filename} already exists')
@@ -193,7 +193,12 @@ class GridLoader():
         h5 = h5py.File(filepath)
         FS_grp= h5.create_group('FS')
         
+        exit_status = output['exit_status']
+        
         for key, arr in output['FS'].items():            
+        
+            arr = self.pad_arrays(arr, exit_status)
+            
             FS_grp.create_dataset(key, data = arr)
 
         CS_grp = h5.create_group('CS')
@@ -201,7 +206,9 @@ class GridLoader():
         for key, arr in output['CS'].items():            
             CS_grp.create_dataset(key, data = arr)
 
-        h5.create_dataset('exit_status', data = output['exit_status']) 
+        h5.create_dataset('t', data = output['t'])
+        h5.create_dataset('exit_status', data = exit_status) 
+                
                 
         return
                 
