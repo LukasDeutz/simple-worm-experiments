@@ -22,13 +22,29 @@ class GridPoolLoader():
         
         return len(self.GridLoaders)
 
+    def __getitem__(self, idx):
+        
+        return self.GridLoaders[idx]
+
+    def __iter__(self):
+        
+        return iter(self.GridLoaders)
+    
     def v_arr(self, idx, key = None):
         
         return self.GridLoaders[idx].v_arr(key)
-              
-    def save_data(self, file_path, FS_keys, CS_keys = []):
+
+    @property
+    def filenames(self):
         
-        h5 = h5py.File(file_path, 'w')
+        return [GL.PG.filename for GL in self]
+                      
+    def save_data(self, file_path, FS_keys, CS_keys = [], overwrite = True):
+        
+        if overwrite:
+            h5 = h5py.File(file_path, 'w')
+        else:
+            h5 = h5py.File(file_path, 'r+')
                                 
         for GL in self.GridLoaders:
                         
@@ -103,20 +119,23 @@ class GridLoader():
         
         output = self.load_data(FS_keys, CS_keys)
 
-        PG_grp = h5.create_group(self.PG.filename)                
-        FS_grp = PG_grp.create_group('FS')
-        CS_grp = PG_grp.create_group('CS')
+        if self.PG.filename not in h5:
 
-        for key, arr in output['FS'].items():            
-            FS_grp.create_dataset(key, data = arr)
+            PG_grp = h5.create_group(self.PG.filename)                
+            FS_grp = PG_grp.create_group('FS')
+            CS_grp = PG_grp.create_group('CS')
+    
+            for key, arr in output['FS'].items():            
+                FS_grp.create_dataset(key, data = arr)
+    
+            for key, arr in output['CS'].items():            
+                CS_grp.create_dataset(key, data = arr)
 
-        for key, arr in output['CS'].items():            
-            CS_grp.create_dataset(key, data = arr)
-                        
-        #TODO: Save base parameter                
+                PG_grp.attrs['exits_status'] = output['exit_status']
         
-        PG_grp.attrs['exits_status'] = output['exit_status']
-        
+        else:
+            print(f'Group for grid {self.PG.filename} already exists')
+                                
         return
                 
     def save_data(self, filepath, FS_keys, CS_keys = []):
