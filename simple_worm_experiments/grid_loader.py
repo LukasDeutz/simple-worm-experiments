@@ -179,7 +179,7 @@ class GridLoader():
                 CS_grp.create_dataset(key, data = arr)
 
             PG_grp.create_dataset('t', data = output['t'])
-            PG_grp.create_dataset('exits_status', data = output['exit_status'])        
+            PG_grp.create_dataset('exit_status', data = output['exit_status'])        
         
         else:
             print(f'Group for grid {self.PG.filename} already exists')
