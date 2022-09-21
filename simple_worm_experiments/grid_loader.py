@@ -54,37 +54,6 @@ class GridPoolLoader():
         h5.close()
                                                                                                                    
 class GridLoader():
-
-    @staticmethod
-    def pad_arrays(arr_list, exit_status_arr):
-        '''
-        Simulations which are failed need to be padded with nans.
-        
-        :param arr_list (list): 
-        :param exit_status (int):
-        '''                        
-        #TODO: Fail potential
-        n = int(self.PG.base_parameter['T']/self.PG.base_parameter['dt'])        
-        # Desired shape
-        shape = (n,) + arr_list[0].shape[1:]
-                               
-        pad_arr_list = []
-                                                        
-        for arr, exit_status in zip(arr_list, exit_status_arr):
-            
-            # If simulation succeded, no padding is needed
-            if exit_status == 0:
-                pad_arr_list.append(arr)
-                continue
-            
-            # If simulation failed we pad the missing time steps with nans
-            pad_arr = np.zeros(shape)
-            pad_arr[:] = np.nan                    
-            pad_arr[:np.size(arr,0)] = arr
-            
-            pad_arr_list.append(pad_arr)
-            
-        return pad_arr_list
     
     def __init__(self, 
                  grid_param_path, 
@@ -157,6 +126,36 @@ class GridLoader():
         #output['parameter'] = self.PG.base_parameter
                                             
         return output
+
+    def pad_arrays(self, arr_list, exit_status_arr):
+        '''
+        Simulations which are failed need to be padded with nans.
+        
+        :param arr_list (list): 
+        :param exit_status (int):
+        '''                        
+        #TODO: Fail potential
+        n = int(self.PG.base_parameter['T']/self.PG.base_parameter['dt'])        
+        # Desired shape
+        shape = (n,) + arr_list[0].shape[1:]
+                               
+        pad_arr_list = []
+                                                        
+        for arr, exit_status in zip(arr_list, exit_status_arr):
+            
+            # If simulation succeded, no padding is needed
+            if exit_status == 0:
+                pad_arr_list.append(arr)
+                continue
+            
+            # If simulation failed we pad the missing time steps with nans
+            pad_arr = np.zeros(shape)
+            pad_arr[:] = np.nan                    
+            pad_arr[:np.size(arr,0)] = arr
+            
+            pad_arr_list.append(pad_arr)
+            
+        return pad_arr_list
             
     def add_data_to_h5(self, h5, FS_keys, CS_keys = []):
         
