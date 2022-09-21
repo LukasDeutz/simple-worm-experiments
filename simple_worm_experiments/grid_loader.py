@@ -117,9 +117,9 @@ class GridLoader():
 
     def add_data_to_h5(self, h5, FS_keys, CS_keys = []):
         
-        output = self.load_data(FS_keys, CS_keys)
-
         if self.PG.filename not in h5:
+        
+            output = self.load_data(FS_keys, CS_keys)
 
             PG_grp = h5.create_group(self.PG.filename)                
             FS_grp = PG_grp.create_group('FS')
