@@ -8,6 +8,7 @@ Created on 17 Sept 2022
 from os.path import join
 import pickle
 import h5py
+import numpy as np
 
 from parameter_scan.util import load_grid_param
 from parameter_scan import ParameterGrid
@@ -54,6 +55,37 @@ class GridPoolLoader():
                                                                                                                    
 class GridLoader():
 
+    @staticmethod
+    def pad_arrays(arr_list, exit_status_arr):
+        '''
+        Simulations which are failed need to be padded with nans.
+        
+        :param arr_list (list): 
+        :param exit_status (int):
+        '''                        
+        #TODO: Fail potential
+        n = int(self.PG.base_parameter['T']/self.PG.base_parameter['dt'])        
+        # Desired shape
+        shape = (n,) + arr_list[0].shape[1:]
+                               
+        pad_arr_list = []
+                                                        
+        for arr, exit_status in zip(arr_list, exit_status_arr):
+            
+            # If simulation succeded, no padding is needed
+            if exit_status == 0:
+                pad_arr_list.append(arr)
+                continue
+            
+            # If simulation failed we pad the missing time steps with nans
+            pad_arr = np.zeros(shape)
+            pad_arr[:] = np.nan                    
+            pad_arr[:np.size(arr,0)] = arr
+            
+            pad_arr_list.append(pad_arr)
+            
+        return pad_arr_list
+    
     def __init__(self, 
                  grid_param_path, 
                  sim_path):
@@ -99,6 +131,7 @@ class GridLoader():
         
         output['exit_status'] = []
         
+                
         for filepath in self.sim_filepaths: 
         
             data = open(filepath, 'rb')
@@ -109,23 +142,38 @@ class GridLoader():
             for key in CS_keys: output['CS'][key].append(getattr(data['CS'], key))
             
             output['exit_status'].append(data['exit_status'])
+            
+            
+        # Time only needs to get stored once        
+        T = self.PG.base_parameter['T']
+        dt = self.PG.base_parameter['dt']        
+        n = int(T/dt)
         
+        #TODO: t could possibly start not at dt
+        t = dt * np.arange(1, n+1, 1)       
+        output['t'] = t
+                
         #TODO: base_parameter                                        
         #output['parameter'] = self.PG.base_parameter
                                             
         return output
-
+            
     def add_data_to_h5(self, h5, FS_keys, CS_keys = []):
         
         if self.PG.filename not in h5:
         
             output = self.load_data(FS_keys, CS_keys)
-
+                        
             PG_grp = h5.create_group(self.PG.filename)                
             FS_grp = PG_grp.create_group('FS')
             CS_grp = PG_grp.create_group('CS')
-    
-            for key, arr in output['FS'].items():            
+        
+            exit_status = output['exit_status']
+                                    
+            for key, arr in zip(output['FS'].items()):            
+
+                arr = self.pad_arrays(arr, exit_status)
+                                                                
                 FS_grp.create_dataset(key, data = arr)
     
             for key, arr in output['CS'].items():            
@@ -142,15 +190,15 @@ class GridLoader():
         output = self.load_data(FS_keys, CS_keys)
         
         h5 = h5py.File(filepath)
-        grp = h5.create_group('FS')
+        FS_grp= h5.create_group('FS')
         
         for key, arr in output['FS'].items():            
-            grp.create_dataset(key, data = arr)
+            FS_grp.create_dataset(key, data = arr)
 
-        grp = h5.create_group('CS')
+        CS_grp = h5.create_group('CS')
 
         for key, arr in output['CS'].items():            
-            grp.create_dataset(key, data = arr)
+            CS_grp.create_dataset(key, data = arr)
 
         h5.create_dataset('exit_status', data = output['exit_status']) 
                 
