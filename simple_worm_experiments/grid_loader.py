@@ -131,8 +131,7 @@ class GridLoader():
             for key, arr in output['CS'].items():            
                 CS_grp.create_dataset(key, data = arr)
 
-                PG_grp.attrs['exits_status'] = output['exit_status']
-        
+                PG_grp.create_dataset('exits_status', data = output['exit_status'])        
         else:
             print(f'Group for grid {self.PG.filename} already exists')
                                 
@@ -153,7 +152,7 @@ class GridLoader():
         for key, arr in output['CS'].items():            
             grp.create_dataset(key, data = arr)
 
-        h5.attrs['exit_status'] = output['exit_status']
+        h5.create_dataset('exit_status', data = output['exit_status']) 
                 
         return
                 
