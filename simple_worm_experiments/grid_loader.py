@@ -170,7 +170,7 @@ class GridLoader():
         
             exit_status = output['exit_status']
                                     
-            for key, arr in zip(output['FS'].items()):            
+            for key, arr in output['FS'].items():            
 
                 arr = self.pad_arrays(arr, exit_status)
                                                                 
