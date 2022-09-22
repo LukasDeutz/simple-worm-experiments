@@ -91,7 +91,7 @@ class GridLoader():
         :param keys (list[str], str): keys to load
         '''
         
-        if type(FS_keys) == str: FS_keys = [CS_keys]
+        if type(FS_keys) == str: FS_keys = [FS_keys]
         if type(CS_keys) == str: CS_keys = [CS_keys]
           
         output = {}                                
@@ -188,7 +188,7 @@ class GridLoader():
                 
     def save_data(self, filepath, FS_keys, CS_keys = []):
         
-        if type(FS_keys) == str: FS_keys = [CS_keys]
+        if type(FS_keys) == str: FS_keys = [FS_keys]
         if type(CS_keys) == str: CS_keys = [CS_keys]
                 
         h5 = h5py.File(filepath, 'w')
