@@ -209,6 +209,8 @@ class GridLoader():
 
         h5.create_dataset('t', data = output['t'])
         h5.create_dataset('exit_status', data = exit_status) 
+        
+        h5.close()
                                 
         return
                 
