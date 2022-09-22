@@ -188,6 +188,9 @@ class GridLoader():
                 
     def save_data(self, filepath, FS_keys, CS_keys = []):
         
+        if type(FS_keys) == str: FS_keys = [CS_keys]
+        if type(CS_keys) == str: CS_keys = [CS_keys]
+                
         h5 = h5py.File(filepath, 'w')
         
         output = self.load_data(FS_keys, CS_keys)
