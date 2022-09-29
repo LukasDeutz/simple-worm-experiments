@@ -98,7 +98,7 @@ class PlanarTurnExperiment():
                 
                 # At t=t0, the worm starts the turn maneuver.     
                 # The worm turns by changing the amplitude, frequency
-                # wavelength of curvature the wave function in a step-wise 
+                # wavelength of the curvature wave function in a step-wise 
                 # manner. The modified curvature wave starts at head 
                 # and it replaces the previous wave while it travels
                 # along to body to the tale. 
@@ -203,9 +203,11 @@ class PlanarTurnExperiment():
         
         return CS
     
-    def simulate_planar_turn(self, parameter, pbar, logger):            
+    def simulate_planar_turn(self, parameter, pbar = None, logger = None):            
 
         T = parameter['T']
+        N_report = parameter['N_report']
+        dt_report = parameter['dt_report']
                                                                                                                                             
         MP = dimensionless_MP(parameter)
         CS = self.planar_turn_CS(parameter)
@@ -213,7 +215,7 @@ class PlanarTurnExperiment():
         #TODO: Do we need an initial configuration
         F0 = None
         
-        FS, e = self.worm.solve(T, MP, CS, F0, pbar, logger)                                             
+        FS, e = self.worm.solve(T, MP, CS, F0, pbar, logger, N_report, dt_report)                                             
         
         CS = CS.to_numpy()
                                               

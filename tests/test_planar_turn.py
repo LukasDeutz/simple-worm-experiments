@@ -6,6 +6,7 @@ from multiprocessing import Pool
 # Third party imports
 import matplotlib.pyplot as plt
 import numpy as np
+import tqdm
 
 # Local imports
 from simple_worm.plot3d import generate_interactive_scatter_clip
@@ -20,6 +21,8 @@ def get_base_parameter():
     # Simulation parameter
     N = 129
     dt = 0.01
+    N_report = None
+    dt_report = None
     
     # Model parameter
     external_force = ['rft']
@@ -50,7 +53,7 @@ def get_base_parameter():
     lam0 = 1.5
     f0 = 2.0    
     
-    A1 = 6.0
+    A1 = 8.0
     lam1 = 1.5
     f1 = 2.0    
        
@@ -67,16 +70,18 @@ def get_base_parameter():
         
     parameter = {}
              
+    parameter['N']  = N
+    parameter['dt'] = dt
+    parameter['T'] = T
+    parameter['N_report'] = N_report
+    parameter['dt_report'] = dt_report
+    
     parameter['pi_alpha0'] = pi_alpha0_max            
     parameter['pi_maxiter'] = pi_maxiter             
                 
     parameter['external_force'] = external_force
     parameter['use_inertia'] = use_inertia
     parameter['rft'] = rft    
-    
-    parameter['N']  = N
-    parameter['dt'] = dt
-    parameter['T'] = T
         
     parameter['L0'] = L0
     parameter['r_max'] = r_max
@@ -112,19 +117,13 @@ def test_planar_turn():
         
     parameter = get_base_parameter()
     
-    #parameter['T']  = 2.0
     parameter['N']  = 257
     parameter['dt'] = 0.01
+    parameter['pi'] = False
     
-    parameter['dt'] = 0.01
-    parameter['fdo'] = {1: 2, 2: 2}
-    parameter['pi_alpha0_max'] = 0.7            
-    parameter['pi_alpha0_min'] = 0.1
-    parameter['pi_rel_err_growth_tol'] = 4.0
-    parameter['A1'] = 6.0    
-                
+    pbar = tqdm.tqdm(desc = 'PTE:')    
     PTE = PlanarTurnExperiment(parameter['N'], parameter['dt'], solver = get_solver(parameter), quiet = True)        
-    FS, CS, _ = PTE.simulate_planar_turn(parameter, try_block=False)
+    FS, CS, _ = PTE.simulate_planar_turn(parameter, pbar = pbar)
 
     print(f'Picard iteration converged at every time step: {np.all(FS.pic)}')
     

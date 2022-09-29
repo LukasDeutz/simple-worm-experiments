@@ -122,7 +122,9 @@ class ForwardUndulationExperiment():
 
 
         T = parameter['T']
-                                                                                                                                    
+        dt_report = parameter['dt_report']
+        N_report = parameter['N_report']
+                                                                                                                                                       
         MP = dimensionless_MP(parameter)
         CS = self.undulation_control_sequence(parameter) 
         
@@ -132,7 +134,7 @@ class ForwardUndulationExperiment():
         else:
             F0 = None
                     
-        FS, e = self.worm.solve(T, MP, CS, F0, pbar, logger) 
+        FS, e = self.worm.solve(T, MP, CS, F0, pbar, logger, dt_report, N_report) 
 
         CS = CS.to_numpy()
                                   
@@ -188,8 +190,7 @@ def wrap_simulate_undulation(_input,
     dt = parameter['dt']
         
     FU = ForwardUndulationExperiment(N, dt, solver = get_solver(parameter), quiet = True)
-    
-                    
+                        
     FS, CS, MP, e = FU.simulate_undulation(parameter, pbar, logger)
 
     if e is not None:
