@@ -84,10 +84,12 @@ class RollManeuverExperiment():
             # and we approximate the curvature k as a sin wave
             if t < t0:
 
-                k_arr = A0*np.sin(k0*self.s_arr - w0 * t)
+                k_1_arr = A0*np.sin(k0*self.s_arr - w0 * t)
+                k_2_arr = np.zeros(self.N)
+                k_3_arr = np.zeros(self.N)
 
                 if smo:                                        
-                    k_arr = sig_t * sig_h * k_arr
+                    k_1_arr = sig_t * sig_h * k_1_arr
             
             elif t >= t0 and t <= t0 + Delta_t:         
                 
@@ -107,15 +109,26 @@ class RollManeuverExperiment():
                 # k1 = alpha
                 # k2 = beta
                 # k3 = gamma
-                k1_arr = np.zeros(len(s_arr_1))
-                                                
-                k0_arr = A0 * np.sin(k0*s_arr_0 - w0 * t)                    
+                N1 = len(s_arr_1)
+                
+                k1_1_arr = 1*np.ones(N1)                                                
+                k2_1_arr = np.zeros(N1)
+                k3_1_arr = np.zeros(N1)
+                                
+                k1_0_arr = A0 * np.sin(k0*s_arr_0 - w0 * t)                    
+                k2_0_arr = np.zeros(len(s_arr_0))
+                k3_0_arr = np.zeros(len(s_arr_0))
 
                 if smo:                                        
-                    k0_arr = sig_t[idx0] * sig_h[idx0] * k0_arr
-                    k1_arr = sig_t[idx1] * sig_h[idx1] * k1_arr
+                    k1_0_arr = sig_t[idx0] * sig_h[idx0] * k1_0_arr
+                    k1_1_arr = sig_t[idx1] * sig_h[idx1] * k1_1_arr
+
+                    k2_1_arr = sig_t[idx1] * sig_h[idx1] * k2_1_arr
+                    k3_1_arr = sig_t[idx1] * sig_h[idx1] * k3_1_arr
                 
-                k_arr = np.concatenate((k1_arr, k0_arr))
+                k_1_arr = np.concatenate((k1_1_arr, k1_0_arr))
+                k_2_arr = np.concatenate((k2_1_arr, k2_0_arr))
+                k_3_arr = np.concatenate((k3_1_arr, k3_0_arr))
 
             elif t > t0+Delta_t:                
                 # At t=t0+Delta_t, the worm has finished the roll maneuver 
@@ -144,23 +157,37 @@ class RollManeuverExperiment():
                         s_arr_1 = self.s_arr[idx1]
                         s_arr_0_t = self.s_arr[idx0_t]
         
-                        k0_h_arr = A0 * np.sin(k0*s_arr_0_h - w0 * t)
-                        
+                        k_1_0_h_arr = A0 * np.sin(k0*s_arr_0_h - w0 * t)
+                        k_2_0_h_arr = np.zeros(len(s_arr_0_h))
+                        k_3_0_h_arr = np.zeros(len(s_arr_0_h))
+                                                
                         #TODO: Roll maneuver goes here
                         # k1 = alpha
                         # k2 = beta
                         # k3 = gamma
-                        k1_arr = np.zeros(len(s_arr_1))
-                                                
-                        k0_t_arr =  A0 * np.sin(k0*s_arr_0_t - w0 * t)
-    
-                        if smo:
-                            k0_h_arr = sig_t[idx0_h] * sig_h[idx0_h] * k0_h_arr
-                            k1_arr = sig_t[idx1] * sig_h[idx1] * k1_arr
-                            k0_t_arr = sig_t[idx0_t] * sig_h[idx0_t] * k0_t_arr
-    
-                        k_arr = np.concatenate((k0_h_arr, k1_arr, k0_t_arr))
+                        N1 = len(s_arr_1)
                         
+                        k1_1_arr = 1*np.ones(N1)
+                        k2_1_arr = np.zeros(N1)
+                        k3_1_arr = np.zeros(N1)
+                                                                                    
+                        k_1_0_t_arr =  A0 * np.sin(k0*s_arr_0_t - w0 * t)
+                        k_2_0_t_arr = np.zeros(len(s_arr_0_t))
+                        k_3_0_t_arr = np.zeros(len(s_arr_0_t))
+
+                        if smo:
+                            k_1_0_h_arr = sig_t[idx0_h] * sig_h[idx0_h] * k_1_0_h_arr
+                            k1_1_arr = sig_t[idx1] * sig_h[idx1] * k1_1_arr
+                            k_1_0_t_arr = sig_t[idx0_t] * sig_h[idx0_t] * k_1_0_t_arr
+    
+                            k2_1_arr = sig_t[idx1] * sig_h[idx1] * k2_1_arr
+                            k3_1_arr = sig_t[idx1] * sig_h[idx1] * k3_1_arr
+
+    
+                        k_1_arr = np.concatenate((k_1_0_h_arr, k1_1_arr, k_1_0_t_arr))
+                        k_2_arr = np.concatenate((k_2_0_h_arr, k2_1_arr, k_2_0_t_arr))
+                        k_3_arr = np.concatenate((k_3_0_h_arr, k3_1_arr, k_3_0_t_arr))
+                                                
                     # If s >= 1.0, then the modified curvature wave has reached 
                     # the tale, i.e. the curvature function is only composed of 
                     # two sine waves, one with the initial kinematic parameters
@@ -176,33 +203,46 @@ class RollManeuverExperiment():
                         s_arr_0 = self.s_arr[idx0]
                         s_arr_1 = self.s_arr[idx1]
         
-                        k0_arr = A0 * np.sin(k0*s_arr_0 - w0 * t)
-                        
+                        k1_0_arr = A0 * np.sin(k0*s_arr_0 - w0 * t)
+                        k2_0_arr = np.zeros(len(s_arr_0))
+                        k3_0_arr = np.zeros(len(s_arr_0))
+                                                
                         #TODO: Roll maneuver goes here
                         # k1 = alpha
                         # k2 = beta
-                        # k3 = gamma
-                        k1_arr = np.zeros(len(s_arr_1))
-                            
+                        # k3 = gamma  
+                        
+                        N1 = len(s_arr_1)                   
+                        k1_1_arr = 1*np.ones(N1)
+                        k2_1_arr = np.zeros(N1)
+                        k3_1_arr = np.zeros(N1)
+                                                        
                         if smo:
-                            k0_arr = sig_t[idx0] * sig_h[idx0] * k0_arr
-                            k1_arr = sig_t[idx1] * sig_h[idx1] * k1_arr
+                            k1_0_arr = sig_t[idx0] * sig_h[idx0] * k1_0_arr
+                            k1_1_arr = sig_t[idx1] * sig_h[idx1] * k1_1_arr
     
-                        k_arr = np.concatenate((k0_arr, k1_arr))
+                            k2_1_arr = sig_t[idx1] * sig_h[idx1] * k2_1_arr
+                            k3_1_arr = sig_t[idx1] * sig_h[idx1] * k3_1_arr
+
+                        k_1_arr = np.concatenate((k1_0_arr, k1_1_arr))
+                        k_2_arr = np.concatenate((k2_0_arr, k2_1_arr))
+                        k_3_arr = np.concatenate((k3_0_arr, k3_1_arr))
                 
                 # Roll maneuver is finished the control along the entire body 
                 # is simply given by an undulation
                 else:
                     
-                    k_arr = A0*np.sin(k0*self.s_arr - w0 * t)
-    
+                    k_1_arr = A0*np.sin(k0*self.s_arr - w0 * t)
+                    k_2_arr = np.zeros(self.N)
+                    k_3_arr = np.zeros(self.N)
+                        
                     if smo:                    
                         
-                        k_arr = sig_t * sig_h * k_arr
+                        k_1_arr = sig_t * sig_h * k_1_arr
 
 
             # TODO: Add k2=beta and k3=gamma if neccessary                                                                                            
-            k_arr = np.vstack((k_arr, np.zeros(self.N), np.zeros(self.N)))
+            k_arr = np.vstack((k_1_arr, k_2_arr, k_3_arr))
             
             k_func = Function(self.worm.function_spaces['Omega'])            
             k_func = v2f(k_arr, k_func, W = self.worm.function_spaces['Omega'])
