@@ -47,7 +47,6 @@ class PlanarTurnExperiment():
                                                             
     def planar_turn_CS(self, parameter):
 
-
         T = parameter['T']
 
         t_arr = np.arange(self.dt, T+0.1*self.dt, self.dt)
@@ -215,7 +214,7 @@ class PlanarTurnExperiment():
         #TODO: Do we need an initial configuration
         F0 = None
         
-        FS, e = self.worm.solve(T, MP, CS, F0, pbar, logger, N_report, dt_report)                                             
+        FS, e = self.worm.solve(T, MP, CS, F0, pbar, logger, dt_report, N_report)                                             
         
         CS = CS.to_numpy()
                                               
