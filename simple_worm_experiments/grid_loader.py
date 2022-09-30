@@ -5,7 +5,7 @@ Created on 17 Sept 2022
 '''
 
 # This needs move to go simple-worm-experiments
-from os.path import join
+from os.path import join, isfile
 import pickle
 import h5py
 import numpy as np
@@ -58,6 +58,11 @@ class GridLoader():
     def __init__(self, 
                  grid_param_path, 
                  sim_path):
+        '''
+        
+        :param grid_param_path (str): grid_param json filepath
+        :param sim_path (str): directory path of simulation result files 
+        '''
                 
         self.PG = self._init_PG(grid_param_path)                
         self.sim_path = sim_path
@@ -186,11 +191,16 @@ class GridLoader():
                                 
         return
                 
-    def save_data(self, filepath, FS_keys, CS_keys = []):
+    def save_data(self, filepath, FS_keys, CS_keys = [], overwrite = True):
         
+        if isfile(filepath):
+            if not overwrite:
+                print(f'HDF5 file {filepath} already exists. Set overwrite=True to overwrite existing file.')
+                return
+                
         if type(FS_keys) == str: FS_keys = [FS_keys]
         if type(CS_keys) == str: CS_keys = [CS_keys]
-                
+                                            
         h5 = h5py.File(filepath, 'w')
         
         output = self.load_data(FS_keys, CS_keys)
