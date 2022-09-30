@@ -120,7 +120,12 @@ class GridLoader():
             
         # Time only needs to get stored once        
         T = self.PG.base_parameter['T']
-        dt = self.PG.base_parameter['dt']        
+        
+        if self.PG.base_parameter['dt_report'] is not None:
+            dt = self.PG.base_parameter['dt_report']
+        else:
+            dt = self.PG.base_parameter['dt']
+        
         n = int(T/dt)
         
         #TODO: t could possibly start not at dt
