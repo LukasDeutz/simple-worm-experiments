@@ -64,15 +64,9 @@ class GridLoader():
         :param sim_path (str): directory path of simulation result files 
         '''
                 
-        self.PG = self._init_PG(grid_param_path)                
+        self.PG = ParameterGrid.init_pg_from_filepath(grid_param_path)                
         self.sim_path = sim_path
                   
-    def _init_PG(self, grid_param_path):
-        
-        grid_param, base_parameter = load_grid_param(grid_param_path)           
-        PG = ParameterGrid(base_parameter, grid_param)
-          
-        return PG
     
     def v_arr(self, idx, key = None):
         
