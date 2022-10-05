@@ -136,7 +136,7 @@ class ForwardUndulationExperiment():
                     
         FS, e = self.worm.solve(T, MP, CS, F0, pbar, logger, dt_report, N_report) 
 
-        CS = CS.to_numpy()
+        CS = CS.to_numpy(dt_report = dt_report, N_report = N_report)
                                   
         return FS, CS, MP, e
 
