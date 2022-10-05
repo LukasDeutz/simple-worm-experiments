@@ -139,7 +139,13 @@ class GridLoader():
         :param exit_status (int):
         '''                        
         #TODO: Fail potential
-        n = int(self.PG.base_parameter['T']/self.PG.base_parameter['dt'])        
+        if self.PG.base_parameter['dt_report'] is not None:
+            dt = self.PG.base_parameter['dt_report']
+        else:
+            dt = self.PG.base_parameter['dt']
+            
+        n = int(round(self.PG.base_parameter['T']/dt))        
+                                    
         # Desired shape
         shape = (n,) + arr_list[0].shape[1:]
                                
@@ -218,6 +224,9 @@ class GridLoader():
 
         for key, arr in output['CS'].items():            
             CS_grp.create_dataset(key, data = arr)
+
+            arr = self.pad_arrays(arr, exit_status)
+
 
         h5.create_dataset('t', data = output['t'])
         h5.create_dataset('exit_status', data = exit_status) 
