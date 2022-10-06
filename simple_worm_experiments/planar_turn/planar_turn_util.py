@@ -5,10 +5,10 @@ Created on 6 Oct 2022
 '''
 import numpy as np
 
-def undulation_indexes(parameter, t):
+def turn_maneuver_indexes(parameter, t):
     '''
-    Returns indexes of timesteps befor and after the 
-    turn maneuver 
+    Returns time indexes before, during and after the 
+    turn maneuver. 
     
     :param parameter (dict): parameter dictionary 
     :param t (np.array): times
@@ -26,22 +26,14 @@ def undulation_indexes(parameter, t):
     
     return idx1, idx2, idx3
 
-def compute_turning_angle(x, t, parameter):
+def compute_turning_angle(x1, x2):
     '''
     Computes turning angle of the roll maneuver
     
-    :param x:
-    :param t:
-    :param parameter:
+    :param x1 (np.array): centreline coordinates before roll maneuver
+    :param x2 (np.array): centreline coordinates after roll maneuver
     '''
-                          
-    idx1, _ , idx3 = undulation_indexes(parameter, t)
-        
-    # turn angle
-            
-    x1 = x[idx1]
-    x2 = x[idx3]
-    
+                              
     x1_com = np.mean(x1, axis = 2)        
     t1_com = np.diff(x1_com, axis = 0)        
     avg_t1_com = np.mean(t1_com, axis = 0)        
@@ -54,12 +46,14 @@ def compute_turning_angle(x, t, parameter):
     
     #TODO: Only works if the undulation plane is the xy-plane 
     
-    # To caculate the turning anlge, we use polar coordinates.
-    # The average direction of travel before the roll
-    # maneuver avg_t1_com, points in positive x direction.
-    # The y-axis is then chosen to be orthogonal to the x-axis
-    # such that left turns have negative angles and right turns
-    # have positive angles     
+    # To caculate the turning anlge, we define a cartesian coordinate 
+    # system such that the average direction of travel vector before the 
+    # turn maneuver avg_t1_com, points in positive x direction.
+    # The y-axis is then chosen such that left turns have negative 
+    # angles and right turns have positive angles. The turning angle 
+    # is computed by expressing the average direction of travel vector 
+    # after the  turn maneuver in the initial coordinates system and 
+    # transforming it into polor coordinates. 
     e_x = avg_t1_com[0:2]
     e_y = np.array([e_x[1], -e_x[0]])
               
