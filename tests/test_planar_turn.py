@@ -14,6 +14,7 @@ from simple_worm.plot3d_cosserat import plot_controls_CS_vs_FS, plot_single_stra
 
 from simple_worm_experiments.util import default_parameter, get_solver
 from simple_worm_experiments.planar_turn.planar_turn import PlanarTurnExperiment, wrap_simulate_planar_turn
+from simple_worm_experiments.planar_turn.planar_turn_util import compute_turning_angle
 from simple_worm_experiments.forward_undulation.plot_undulation import plot_trajectory
 
 def get_base_parameter():
@@ -60,7 +61,7 @@ def get_base_parameter():
     T0 = 1.0 / f0
     T1 = 1.0 / f1
        
-    T = round(4.0*T0, 1)
+    T = round(5.0*T0, 1)
     t0 = 2*T0
     Delta_t = 0.5 * T1
         
@@ -116,42 +117,37 @@ def get_base_parameter():
 def test_planar_turn():
         
     parameter = get_base_parameter()
-    
-    parameter['N']  = 257
+
+    parameter['N'] = 100
     parameter['dt'] = 0.01
+        
     parameter['pi'] = False
     
     pbar = tqdm.tqdm(desc = 'PTE:')    
     PTE = PlanarTurnExperiment(parameter['N'], parameter['dt'], solver = get_solver(parameter), quiet = True)        
-    FS, CS, _ = PTE.simulate_planar_turn(parameter, pbar = pbar)
+    FS, CS, _, e = PTE.simulate_planar_turn(parameter, pbar = pbar)
 
-    print(f'Picard iteration converged at every time step: {np.all(FS.pic)}')
+    if e is not None:
+        raise e
+
+    phi = compute_turning_angle(FS.x, FS.times, parameter)
+    phi = 180 * phi / np.pi
+
+    print(f'Finished simulation: Picard iteration convergence rate: {np.sum(FS.pic) / len(FS.pic)}')
+    print(f'Turning angle: {round(phi,1)}')
     
-    # fp = 'F0.pkl'        
-    # F0 = pickle.load(open(fp, 'rb'))
-    #
-    # data_path = '/home/lukas/git/forward-worm/data/planar_turn/'
-    # #wrap_simulate_planar_turn(parameter, data_path, 'test', True, save = 'all', _try = True, F0 = F0)
+    if False:
+                
+        CS.to_numpy()
+        generate_interactive_scatter_clip(FS, 500, perspective = 'xy', n_arrows = 50) # n_arrows= 65                               
     
-    # with open(fp, 'wb') as f:
-    #     F0 = FS[-1]
-    #     pickle.dump(F0, f)
-                            
-    #print(f'Picard iteration converged at every time step: {np.all(FS.pic)}')
-            
-    # CS.to_numpy()
-    #
-    # CS = CS.to_numpy()
-    #
-    # generate_interactive_scatter_clip(FS, 500, perspective = 'xy', n_arrows = 50) # n_arrows= 65                               
-    
-    # plot_controls_CS_vs_FS(CS.to_numpy(), FS, parameter['dt'])        
-    # k0 = CS.Omega[:, 0, :]
-    # k = FS.Omega[:, 0, :]        
-    #
-    # plot_single_strain_vs_control(k0, k, dt = parameter['dt'], titles = [r'$\kappa_{2,0}$', r'$\kappa_{2}$'], cbar_format='%.1f', cmap = plt.get_cmap('plasma'))        
-    # plot_trajectory(FS, parameter)
-    # plt.show()    
+        plot_controls_CS_vs_FS(CS.to_numpy(), FS, parameter['dt'])        
+        k0 = CS.Omega[:, 0, :]
+        k = FS.Omega[:, 0, :]        
+        
+        plot_single_strain_vs_control(k0, k, dt = parameter['dt'], titles = [r'$\kappa_{2,0}$', r'$\kappa_{2}$'], cbar_format='%.1f', cmap = plt.get_cmap('plasma'))        
+        plot_trajectory(FS, parameter)
+        plt.show()    
                
                                   
 if __name__ == "__main__":
