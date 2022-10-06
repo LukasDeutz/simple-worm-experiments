@@ -232,10 +232,8 @@ class GridLoader():
         h5.create_dataset('exit_status', data = exit_status) 
         
         h5.attrs['grid_filename'] = self.PG.filename + '.json'       
-        
-        h5.close()
-                                
-        return
+                                        
+        return h5
                 
                                                                                                            
 
