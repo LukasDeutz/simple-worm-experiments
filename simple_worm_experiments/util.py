@@ -282,8 +282,6 @@ def dimensionless_MP(parameter):
                    
     return MP
 
-
-
 #===============================================================================
 # Analyse simulation results 
 
@@ -299,6 +297,7 @@ def compute_com(x, dt):
 
 def comp_mean_com_velocity(x, t, Delta_T = 0.0):
     '''
+    Computes mean swimming speed
     
     :param x: centreline coordinates
     :param t: time
@@ -314,6 +313,19 @@ def comp_mean_com_velocity(x, t, Delta_T = 0.0):
     
     return U 
 
+def comp_mean_work(dot_W, t, Delta_T = 0.0):
+    '''
+    Computes mean work done by the swimmer
+    
+    :param dot_W (np.array): rate of work array
+    :param t (np.array): time array
+    :param Delta_T: timepoints t < Delta_T are cropped
+    '''
+    
+    dot_W = dot_W[t >= Delta_T]
+
+    return np.mean(dot_W)
+    
 def get_point_trajectory(FS, point = 'head', undu_plane = 'xy'):
     
     # check if motion is planar

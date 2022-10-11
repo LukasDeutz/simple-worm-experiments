@@ -5,6 +5,7 @@ from os.path import isfile
 import matplotlib.pyplot as plt
 import numpy as np
 import tqdm
+from scipy.integrate import trapezoid
 
 # Local imports
 from simple_worm.plot3d import generate_interactive_scatter_clip
@@ -131,7 +132,42 @@ def test_forward_undulation():
 
 
     return
-           
+
+def test_forward_undulation_work():
+    
+    parameter = get_test_parameter()        
+    
+    FS, CS = run_foward_undulation(parameter)
+            
+    dot_w_lin = FS.dot_w_lin
+    dot_w_rot = FS.dot_w_rot
+    
+    dot_W_lin = FS.dot_W_lin
+    dot_W_rot = FS.dot_W_rot
+    
+    # Check if fenics and numerical integration are equal
+    # up to some tolerance
+    ds = 1.0 / (parameter['N'] - 1)        
+    dot_W_lin_np = trapezoid(dot_w_lin, dx = ds, axis = 1)
+    dot_W_rot_np = trapezoid(dot_w_rot, dx = ds, axis = 1)
+        
+    assert np.allclose(dot_W_lin, dot_W_lin_np)
+    assert np.allclose(dot_W_rot_np, dot_W_rot_np)
+    
+    t = FS.times
+    T_undu = 1.0/parameter['f']        
+    idx = t >= T_undu
+    T = parameter['T']
+    
+    dot_W_lin_avg = np.mean(dot_W_lin[idx])
+    dot_W_rot_avg = np.mean(dot_W_rot[idx])
+    
+    plt.plot(t, dot_W_lin)
+    plt.plot([0, T], [dot_W_lin_avg, dot_W_lin_avg])
+    plt.show()
+                                     
+    return
+               
 def test_report_lower_resolution():        
 
     parameter = get_test_parameter()    
@@ -157,7 +193,9 @@ def test_report_lower_resolution():
 if __name__ == "__main__":
     
     #test_forward_undulation()
-    test_report_lower_resolution()
+    #test_report_lower_resolution()
+    
+    test_forward_undulation_work()
     
     print('Finished')
 
