@@ -3,14 +3,9 @@ Created on 28 Jun 2022
 
 @author: lukas
 '''
-
-
-# Build-in importsO
+# Build-in imports
 import itertools as it
 from multiprocessing import Pool
-from os.path import isfile, join
-import traceback
-import json
 import numpy as np
 
 # Third party imports
