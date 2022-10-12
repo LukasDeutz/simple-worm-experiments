@@ -110,9 +110,9 @@ class GridLoader():
                 
                 # TODO: Do dot_W_lin and dot_W_rot need to be handled differently?
                 if key == 'dot_W_lin':
-                    output['FS']['dot_W_lin'] = data['FS'].dot_W_lin                
+                    output['FS']['dot_W_lin'].append(data['FS'].dot_W_lin)                
                 elif key == 'dot_W_rot':
-                    output['FS']['dot_W_rot'] = data['FS'].dot_W_rot                                     
+                    output['FS']['dot_W_rot'].append(data['FS'].dot_W_rot)                                     
                 else:                    
                     output['FS'][key].append(getattr(data['FS'], key))
 
@@ -166,11 +166,14 @@ class GridLoader():
                 pad_arr_list.append(arr)
                 continue
             
-            # If simulation failed we pad the missing time steps with nans
-            pad_arr = np.zeros(shape)
-            pad_arr[:] = np.nan                    
-            pad_arr[:np.size(arr,0)] = arr
-            
+            try:
+                # If simulation failed we pad the missing time steps with nans
+                pad_arr = np.zeros(shape)
+                pad_arr[:] = np.nan                    
+                pad_arr[:np.size(arr,0)] = arr
+            except Exception as e:
+                print(f'Debug: {e}')
+                        
             pad_arr_list.append(pad_arr)
             
         return pad_arr_list
@@ -179,8 +182,11 @@ class GridLoader():
         
         if self.PG.filename not in h5:
         
+            if type(FS_keys) == str: FS_keys = [FS_keys]
+            if type(CS_keys) == str: CS_keys = [CS_keys]
+            
             output = self.load_data(FS_keys, CS_keys)
-                        
+                    
             PG_grp = h5.create_group(self.PG.filename)                
             FS_grp = PG_grp.create_group('FS')
             CS_grp = PG_grp.create_group('CS')
@@ -189,16 +195,18 @@ class GridLoader():
                                     
             for key, arr in output['FS'].items():            
 
-                arr = self.pad_arrays(arr, exit_status)
-                                                                
+                arr = self.pad_arrays(arr, exit_status)                                                                
                 FS_grp.create_dataset(key, data = arr)
     
             for key, arr in output['CS'].items():            
+                
+                arr = self.pad_arrays(arr, exit_status)
                 CS_grp.create_dataset(key, data = arr)
 
             PG_grp.create_dataset('t', data = output['t'])
-            PG_grp.create_dataset('exit_status', data = exit_status)        
-        
+            PG_grp.create_dataset('exit_status', data = exit_status)                
+            PG_grp.attrs['grid_filename'] = self.PG.filename + '.json'       
+                
         else:
             print(f'Group for grid {self.PG.filename} already exists')
                                 
@@ -224,17 +232,15 @@ class GridLoader():
         
         for key, arr in output['FS'].items():            
         
-            arr = self.pad_arrays(arr, exit_status)
-            
+            arr = self.pad_arrays(arr, exit_status)            
             FS_grp.create_dataset(key, data = arr)
 
         CS_grp = h5.create_group('CS')
 
         for key, arr in output['CS'].items():            
-            CS_grp.create_dataset(key, data = arr)
-
+            
             arr = self.pad_arrays(arr, exit_status)
-
+            CS_grp.create_dataset(key, data = arr)
 
         h5.create_dataset('t', data = output['t'])
         h5.create_dataset('exit_status', data = exit_status) 
