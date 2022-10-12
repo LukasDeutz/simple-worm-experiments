@@ -106,27 +106,35 @@ class GridLoader():
             
             data = pickle.load(data)
 
-            for key in FS_keys: output['FS'][key].append(getattr(data['FS'], key))
+            for key in FS_keys:
+                
+                # TODO: Do dot_W_lin and dot_W_rot need to be handled differently?
+                if key == 'dot_W_lin':
+                    output['FS']['dot_W_lin'] = data['FS'].dot_W_lin                
+                elif key == 'dot_W_rot':
+                    output['FS']['dot_W_rot'] = data['FS'].dot_W_rot                                     
+                else:                    
+                    output['FS'][key].append(getattr(data['FS'], key))
+
             for key in CS_keys: output['CS'][key].append(getattr(data['CS'], key))
             
             output['exit_status'].append(data['exit_status'])
-            
-            
-        # Time only needs to get stored once        
-        T = self.PG.base_parameter['T']
-        
+                
+        # If dt_report is not None, set dt to dt_report
+        # so that data an time array have the same dimension  
         if self.PG.base_parameter['dt_report'] is not None:
             dt = self.PG.base_parameter['dt_report']
         else:
             dt = self.PG.base_parameter['dt']
         
-        n = int(T/dt)
-        
+        # Time only needs to get stored once        
+        T = self.PG.base_parameter['T']
+        n = int(T/dt)        
         #TODO: t could possibly start not at dt
         t = dt * np.arange(1, n+1, 1)       
         output['t'] = t
                 
-        #TODO: base_parameter                                        
+        #TODO: Convert parameter dictionary to group with attributes?                                        
         #output['parameter'] = self.PG.base_parameter
                                             
         return output
