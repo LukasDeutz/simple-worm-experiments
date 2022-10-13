@@ -133,9 +133,10 @@ def test_forward_undulation():
 
     return
 
-def test_forward_undulation_work():
+def test_forward_undulation_work(show = False):
     
     parameter = get_test_parameter()        
+    parameter['T'] = 2.5
     
     FS, CS = run_foward_undulation(parameter)
             
@@ -164,7 +165,11 @@ def test_forward_undulation_work():
     
     plt.plot(t, dot_W_lin)
     plt.plot([0, T], [dot_W_lin_avg, dot_W_lin_avg])
-    plt.show()
+    
+    if show:
+        plt.show()
+        
+    plt.savefig('undulation_work.png')
                                      
     return
                
