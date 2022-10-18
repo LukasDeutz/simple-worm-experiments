@@ -8,6 +8,7 @@ import itertools as it
 from multiprocessing import Pool
 import numpy as np
 from scipy.spatial import distance_matrix
+from math import ceil
 
 # Third party imports
 import matplotlib.cm as cm
@@ -391,7 +392,42 @@ def comp_distant_matrix(x, n_skip = None):
                             
     return x_dist_mat
 
-def comp_minimum_distant(x, n_skip):
+def comp_n_skip(parameter, c = 2):
+    '''
+    Computes the number of direct neightbours we skip to either 
+    side when we calculate the distance matrix between all pairs of
+    centreline points.
+    
+    '''          
+    N = parameter['N']
+   
+    # Normalized radius
+    r_max = parameter['r_max'] / parameter['L0']    
+    # Minimum distance used to detect self intersecting body
+    d_min = 2*r_max
+    
+    # Arc-length distance threshold. 
+    # For every point on the centreline, we exclude all neighbouring 
+    # points with smaller distance than the given threshold 
+    # The arc-length threshold is set to c times the minimum distance to
+    # avoid neighbouring points to be dected as intersecting 
+    # cross-sections. 
+    ds_th = c*d_min
+
+    # Arc-length distance between neighbouring points in 
+    # the natural configuration
+    ds = 1.0 / (N - 1)
+    # Translate arc-length threshold into integer which tells
+    # us how many neighbours we need to skip when we calculate
+    # distance matrix of all pairs of centreline points
+    n_skip = ceil(ds_th / ds)
+    
+    return n_skip
+
+
+def comp_minimum_distant(x, parameter, c = 2.0):
+
+    n_skip = comp_n_skip(parameter, c)
 
     x_dist_mat = comp_distant_matrix(x, n_skip)
     
