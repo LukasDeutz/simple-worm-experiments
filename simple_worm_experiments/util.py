@@ -7,6 +7,7 @@ Created on 28 Jun 2022
 import itertools as it
 from multiprocessing import Pool
 import numpy as np
+from scipy.spatial import distance_matrix
 
 # Third party imports
 import matplotlib.cm as cm
@@ -321,6 +322,93 @@ def comp_mean_work(dot_W, t, Delta_T = 0.0):
 
     return np.mean(dot_W)
     
+def comp_angle_of_attack(x, time, Delta_t = 0):
+    '''
+    Compute angle of attack
+    
+    :param x (np.array): centreline coordinates
+    :param t (np.array): times 
+    :param Delta_t (float): crop times points smaller Delta_t average over time
+    '''        
+    dt = time[1] - time[0]
+    
+    _, _, v_com_vec = compute_com(x, dt)
+    
+    # Average com velocity 
+    v_com_avg = np.mean(v_com_vec, axis = 0)
+    # Propulsion direction
+    e_p = v_com_avg / np.linalg.norm(v_com_avg)
+
+    # Compute tangent   
+    # Negative sign makes tangent point from tale to head 
+    t = - np.diff(x, axis = 2)
+    # Normalize
+    abs_tan = np.linalg.norm(t, axis = 1)    
+    t = t / abs_tan[:, None, :]
+    
+    # Turning angle
+    # Arccos of scalar product between local tangent and propulsion direction
+    dot_t_x_e_p = np.arccos(np.sum(t * e_p[None, :, None], axis = 1))
+    
+    theta = (dot_t_x_e_p)  
+    # Think about absolute value here      
+    avg_theta = np.mean(np.abs(theta), axis = 1)
+        
+    # Time average
+    t_avg_theta = np.mean(avg_theta[time >= Delta_t])
+        
+    return theta, avg_theta, t_avg_theta
+    
+        
+def comp_distant_matrix(x, n_skip = None):   
+    '''
+    Compute distance matrix between centreline gird points
+    
+    :param x (np.array): centreline coordinates
+    :param n_skip (int): n most direct neighbours are skipped
+    '''
+    N = x.shape[2] # body points
+    n = x.shape[0] # number timesteps
+    
+    x_dist_mat = np.zeros((n, N, N))
+                                
+    for i, x_t in enumerate(x):
+
+        x_dist_mat_t = distance_matrix(x_t.T, x_t.T)        
+        # Set diagonal distances to v 
+        
+        np.fill_diagonal(x_dist_mat_t, np.nan)
+                
+            # Set distances to n most direct left and right neightbours to inf
+            
+        if n_skip is not None:
+
+            for j in range(1, n_skip+1):
+                x_dist_mat_t += np.diag(np.nan*np.ones(N-j),  j)
+                x_dist_mat_t += np.diag(np.nan*np.ones(N-j), -j)
+        
+        x_dist_mat[i, :, :] = x_dist_mat_t
+                            
+    return x_dist_mat
+
+def comp_minimum_distant(x, n_skip):
+
+    x_dist_mat = comp_distant_matrix(x, n_skip)
+    
+    x_min_dist_arr = np.nanmin(x_dist_mat, axis = 2)
+    x_min_dist = np.nanmin(x_min_dist_arr, axis = 1)
+
+    return x_min_dist, x_min_dist_arr
+
+def comp_average_distant(x):
+         
+    x_dist_mat = comp_distant_matrix(x)
+         
+    x_avg_dist_arr = np.nanmean(x_dist_mat, axis = 2)
+    x_avg_dist = np.nanmean(x_avg_dist_arr, axis = 1)
+
+    return x_avg_dist, x_avg_dist_arr
+                                  
 def get_point_trajectory(FS, point = 'head', undu_plane = 'xy'):
     
     # check if motion is planar

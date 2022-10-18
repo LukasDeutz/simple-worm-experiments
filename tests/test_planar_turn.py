@@ -2,6 +2,7 @@
 from os.path import isfile
 import pickle
 from multiprocessing import Pool
+from math import ceil
 
 # Third party imports
 import matplotlib.pyplot as plt
@@ -12,7 +13,7 @@ import tqdm
 from simple_worm.plot3d import generate_interactive_scatter_clip
 from simple_worm.plot3d_cosserat import plot_controls_CS_vs_FS, plot_single_strain_vs_control
 
-from simple_worm_experiments.util import default_parameter, get_solver
+from simple_worm_experiments.util import default_parameter, get_solver, comp_minimum_distant, comp_average_distant
 from simple_worm_experiments.planar_turn.planar_turn import PlanarTurnExperiment, wrap_simulate_planar_turn
 from simple_worm_experiments.planar_turn.planar_turn_util import compute_turning_angle
 from simple_worm_experiments.forward_undulation.plot_undulation import plot_trajectory
@@ -113,20 +114,25 @@ def get_base_parameter():
     parameter['du_smo'] = du_smo
     
     return parameter
+
+def sim_planar_turn(parameter):
+    
+    pbar = tqdm.tqdm(desc = 'PTE:')    
+    PTE = PlanarTurnExperiment(parameter['N'], parameter['dt'], solver = get_solver(parameter), quiet = True)        
+    FS, CS, _, e = PTE.simulate_planar_turn(parameter, pbar = pbar)
+    
+    return FS, CS, _, e
            
 def test_planar_turn():
         
     parameter = get_base_parameter()
 
     parameter['N'] = 100
-    parameter['dt'] = 0.01
-        
+    parameter['dt'] = 0.01        
     parameter['pi'] = False
     
-    pbar = tqdm.tqdm(desc = 'PTE:')    
-    PTE = PlanarTurnExperiment(parameter['N'], parameter['dt'], solver = get_solver(parameter), quiet = True)        
-    FS, CS, _, e = PTE.simulate_planar_turn(parameter, pbar = pbar)
-
+    FS, CS, _, e = sim_planar_turn(parameter)
+    
     if e is not None:
         raise e
 
@@ -148,11 +154,72 @@ def test_planar_turn():
         plot_single_strain_vs_control(k0, k, dt = parameter['dt'], titles = [r'$\kappa_{2,0}$', r'$\kappa_{2}$'], cbar_format='%.1f', cmap = plt.get_cmap('plasma'))        
         plot_trajectory(FS, parameter)
         plt.show()    
-               
+
+def test_distant_matrix():
+    
+    parameter = get_base_parameter()
+
+    N = 100
+    dt = 0.01
+    parameter['T'] = 2.5
+    parameter['N'] = N
+    parameter['dt'] = dt         
+    parameter['pi'] = False
+    
+    L0 = parameter['L0']     
+    r_max = parameter['r_max'] 
+    
+    r_max = r_max / L0        
+    ds = 1.0 / (N - 1)
+    
+    # Here, we use an arc-length distance threshold. 
+    # For every point, all neighbouring centreline points which 
+    # have a smaller distance than the threshold in 
+    # the natural configuration are excluded.      
+    ds_th = 4*r_max    
+    n_skip = ceil(ds_th / ds)
+                        
+    FS, CS, _, e = sim_planar_turn(parameter)
+    
+    if e is not None:
+        raise e
+
+
+    x_min_dist, x_min_dist_arr = comp_minimum_distant(FS.x, n_skip)
+    x_avg_dist, x_avg_dist_arr = comp_average_distant(FS.x)
+
+    gs = plt.GridSpec(2, 1)
+    ax0 = plt.subplot(gs[0])
+    ax1 = plt.subplot(gs[1])
+    
+    # Plot minimum distance between all pairs of points along the body             
+    ax0.plot(FS.times, x_min_dist)
+    
+    # Minimum allowed distance, for smaller distances worm body starts to intersect ifself
+    d_min = 2*r_max
+    ax0.plot([FS.times[0], FS.times[-1]], [d_min, d_min], '--', c='k')
+    # Plot average distance, for smaller average distance 
+    # interactions should become more important and the 
+    # difference between rft and sbt more significant
+    ax1.plot(FS.times, x_avg_dist)
+    
+    # Highlight time window of turn maneuver
+    t0 = parameter['t0']    
+    t1 = t0 + parameter['Delta_t']    
+    ymin, ymax = plt.ylim()
+    y = np.linspace(0, ymax, int(1e3), endpoint=True)
+    ax0.fill_betweenx(y, t0, t1, color = 'r', alpha = 0.3)
+     
+    ax1.fill_betweenx(y, t0, t1, color = 'r', alpha = 0.3)
+                
+    plt.show()
+    
+    return
                                   
 if __name__ == "__main__":
     
-    test_planar_turn()
+    #test_planar_turn()    
+    test_distant_matrix()
     
     print('Finished')
 
