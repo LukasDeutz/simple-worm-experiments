@@ -49,6 +49,10 @@ class ContractionRelaxationExperiment():
                                                                                                                
         k, sig = parameter['k0'], parameter['sig0'] 
 
+        if type(k)==list: k = np.array(k)
+        if type(sig)==list: sig = np.array(sig)
+        
+
         if k.size == 3:
             
             k_arr = np.zeros((3, N))
