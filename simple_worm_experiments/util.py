@@ -186,7 +186,7 @@ def frame_trafo(v_mat, FS, trafo = 'l2b'):
     e2_mat = FS.e2
     e3_mat = FS.e3
                 
-    v_mat_bar = np.zeros_like(v_mat)
+    v_mat_traf = np.zeros_like(v_mat)
                                                   
     for i, (arr, e1_arr, e2_arr, e3_arr) in enumerate(zip(v_mat, e1_mat, e2_mat, e3_mat)):
         for j, (v, e1, e2, e3) in enumerate(zip(arr.T, e1_arr.T, e2_arr.T, e3_arr.T)):
@@ -195,11 +195,11 @@ def frame_trafo(v_mat, FS, trafo = 'l2b'):
             
             # Transposed of Q transforms from lab to body frame
             if trafo == 'l2b':
-                v_mat_bar[i, :, j] = np.matmul(Q, v)
+                v_mat_traf[i, :, j] = np.matmul(Q, v)
             elif trafo == 'b2l':
-                v_mat_bar[i, :, j] = np.matmul(Q.T, v)
+                v_mat_traf[i, :, j] = np.matmul(Q.T, v)
                     
-    return v_mat_bar
+    return v_mat_traf
                             
 #===============================================================================
 # Simulation parameter

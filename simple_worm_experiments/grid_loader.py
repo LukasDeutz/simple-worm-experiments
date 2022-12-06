@@ -109,12 +109,8 @@ class GridLoader():
             for key in FS_keys:
                 
                 # TODO: Do dot_W_lin and dot_W_rot need to be handled differently?
-                if key == 'dot_W_lin':
-                    output['FS']['dot_W_lin'].append(data['FS'].dot_W_lin)                
-                elif key == 'dot_W_rot':
-                    output['FS']['dot_W_rot'].append(data['FS'].dot_W_rot)                                     
-                else:                    
-                    output['FS'][key].append(getattr(data['FS'], key))
+                output['FS'][key].append(getattr(data['FS'], key))
+
 
             for key in CS_keys: output['CS'][key].append(getattr(data['CS'], key))
             
