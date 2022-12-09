@@ -36,7 +36,8 @@ class ForwardUndulationExperiment():
                             
     def undulation_control_sequence(self, parameter):
         
-        T, smo = parameter['T'], parameter['smo']
+        T = parameter['T']
+        smo, gmo_t = parameter['smo'], parameter['gmo_t']
         A, lam, f = parameter['A'], parameter['lam'], parameter['f']        
         
         w = 2*np.pi*f
@@ -48,47 +49,58 @@ class ForwardUndulationExperiment():
         sigma_expr = Expression(('0', '0', '0'), degree = 1)    
         sigma = Function(self.worm.function_spaces['sigma'])
         sigma.assign(sigma_expr)
+                
+        if gmo_t: # Gradual muscle on switch
+            
+            tau_on = parameter['tau_on']
+            Dt_on = parameter['Dt_on']
+
+            s_m_on = Expression('1 / ( 1 + exp(- ( t - Dt) / tau))', 
+                                 degree = 1,
+                                 t = 0,
+                                 Dt = Dt_on,
+                                 tau = tau_on)
+        else:
+
+            s_m_on = Expression('1', degree = 1)
         
         if smo: # Smooth muscle onset
         
             a  = parameter['a_smo']
             du = parameter['du_smo']
+            
+            st = Expression('1 / ( 1 + exp(-a*(x[0] - du) ) )', degree = 1, a=a, du = du) # sigmoid tale 
+            sh = Expression('1 / ( 1 + exp( a*(x[0] - 1 + du) ) )', degree = 1, a=a, du = du) # sigmoid head
         
-            st = Expression('1/(1 + exp(-a*(x[0] - du)))', degree = 1, a=a, du = du) # sigmoid tale 
-            sh = Expression('1/(1 + exp( a*(x[0] - 1 + du)))', degree = 1, a=a, du = du) # sigmoid head
-        
-            Omega_expr = Expression(("st*sh*A*sin(k*x[0] - w*t)", 
-                                     "0",
-                                     "0"), 
-                                     degree=1,
-                                     t = 0,
-                                     A = A,
-                                     k = k,
-                                     w = w,
-                                     st = st,
-                                     sh = sh)  
-
         else:
-            
-            Omega_expr = Expression(("A*sin(k*x[0] - w*t)", 
-                                     "0",
-                                     "0"), 
-                                     degree=1,
-                                     t = 0,
-                                     A = A,
-                                     k = k,
-                                     w = w)  
-            
+            st = Expression('1', degree = 1)
+            sh = Expression('1', degree = 1)
+                                                                
+        Omega_expr = Expression(("s_m_on*st*sh*A*sin(k*x[0] - w*t)", 
+                                 "0",
+                                 "0"), 
+                                 degree=1,
+                                 t = 0,
+                                 A = A,
+                                 k = k,
+                                 w = w,
+                                 st = st,
+                                 sh = sh,
+                                 s_m_on = s_m_on)   
                                 
         CS = []
             
         for t in t_arr:
             
+            s_m_on.t = t
+            
+            s_m_on_func = Function(self.worm.function_spaces['dot_w_F_lin'])
+            s_m_on_func.assign(s_m_on)
+                                                      
             Omega_expr.t = t
             Omega = Function(self.worm.function_spaces['Omega'])        
             Omega.assign(Omega_expr)
-    
-            
+                                    
             C = ControlsFenics(Omega, sigma)
             CS.append(C)
                         
