@@ -29,7 +29,7 @@ class EPP(object):
        
         
     @staticmethod
-    def comp_dv_plane(FS, s_mask = None):
+    def comp_dv_plane(d2, s_mask = None):
         '''
         Returns normal vector of the dorsal-ventral plane. 
         
@@ -43,8 +43,6 @@ class EPP(object):
         :return d2_avg (np.array): Average d2 direction
         '''
 
-        d2 = FS.e2
-
         if s_mask is not None: d2 = d2[:, :, s_mask]
         
         d2_avg = np.mean(d2, axis = 2)
@@ -53,7 +51,7 @@ class EPP(object):
         return d2_avg 
         
     @staticmethod
-    def comp_dv_rot_angle(FS, s_mask = None, d2_ref=None):
+    def comp_dv_rot_angle(d2, s_mask = None, d2_ref=None):
         '''
         Computes angle between the normal of the dorsal ventral plane with respect 
         to a reference direction
@@ -63,22 +61,23 @@ class EPP(object):
         :return phi (np.array): rotation angle        
         '''        
         # Average d2 direction over time
-        d2_avg = EPP.comp_dv_plane(FS, s_mask)
+        d2_avg = EPP.comp_dv_plane(d2, s_mask)
         
         # If no reference orientation is given
         # then the average d2 direction of initial 
         # frame is used
-        if d2_ref is None: d2_ref = d2_avg[0, :]
+        if d2_ref is None:             
+            d2_ref = d2[0, :, 0]
                 
         phi = np.arccos(np.dot(d2_avg, d2_ref))
         
         return phi
     
     @staticmethod
-    def comp_dv_spherical_angle(FS, s_mask = None, d123_ref = None):
+    def comp_dv_spherical_angle(d2, d123_ref, s_mask = None):
         '''
-        Computes the angle representation the normal direction of the dorsal ventral plane 
-        in spherical coordinates with respect to a given reference frame
+        Computes the representation of the normal direction of the dorsal ventral 
+        plane in spherical coordinates with respect to a given reference frame
                 
         :param (FrameSequenceNumpy): Frame sequence
         :param s_mask (np.array): Boolean array to mask spatial dimension
@@ -87,15 +86,10 @@ class EPP(object):
         :return theta (np.array): 
         '''
                         
-        if d123_ref is None:        
-            F0 = FS[0]
-            d1, d2, d3 = F0.e1, F0.e2, F0.e3
-            d1_ref, d2_ref, d3_ref = d1[:, 0], d2[:, 0], d3[:, 0]            
-        else:
-            d1_ref, d2_ref, d3_ref = d123_ref[:, 0], d123_ref[:, 1], d123_ref[:, 2]
+        d1_ref, d2_ref, d3_ref = d123_ref[0, :], d123_ref[1, :], d123_ref[2, :]
                             
         # Average d2 direction over time
-        d2_avg = EPP.comp_dv_plane(FS, s_mask)
+        d2_avg = EPP.comp_dv_plane(d2, s_mask)
         # Project d2_avg onto reference coordinate axes
         z = np.dot(d2_avg, d3_ref)
         y = np.dot(d2_avg, d2_ref)
@@ -108,7 +102,7 @@ class EPP(object):
         return phi, theta 
     
     @staticmethod
-    def comp_roll_frequency(FS, s_mask = None, d123_ref=None, Dt = None):
+    def comp_roll_frequency(d2, t, d123_ref, s_mask = None, Dt = None):
         '''
         Compute roll frequency from infinite roll experiment
         
@@ -119,20 +113,20 @@ class EPP(object):
         
         :return f_avg (float): Average roll frequency
         :return f_std (float): Std roll frequency 
+        :return phi (np.array): Rotation angle
+        
         '''
         
-        phi, _ = EPP.comp_dv_spherical_angle(FS, s_mask, d123_ref)
-        
-        t = FS.times
-            
+        phi, _ = EPP.comp_dv_spherical_angle(d2, d123_ref, s_mask)
+                    
         # Crop initiation phase of the experiment                        
         if Dt is not None:
             idx = t >= Dt
-            phi = phi[idx]
+            phi_crop = phi[idx]
             t = t[idx]
                                                         
         # find zero crossings                
-        idx_zc = np.abs(np.diff(np.sign(phi))) == 2
+        idx_zc = np.abs(np.diff(np.sign(phi_crop))) == 2
                 
         # interpret zero crossings of the rotation angle
         # as the start point of a rotation period
@@ -144,5 +138,5 @@ class EPP(object):
         f_avg = np.mean(f)
         f_std = np.std(f) 
                           
-        return f_avg, f_std
+        return f_avg, f_std, phi
         
