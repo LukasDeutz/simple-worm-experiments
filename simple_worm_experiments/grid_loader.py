@@ -129,10 +129,7 @@ class GridLoader():
         #TODO: t could possibly start not at dt
         t = dt * np.arange(1, n+1, 1)       
         output['t'] = t
-                
-        #TODO: Convert parameter dictionary to group with attributes?                                        
-        #output['parameter'] = self.PG.base_parameter
-                                            
+                                                            
         return output
 
     def pad_arrays(self, arr_list, exit_status_arr):
