@@ -115,21 +115,58 @@ class GridLoader():
             for key in CS_keys: output['CS'][key].append(getattr(data['CS'], key))
             
             output['exit_status'].append(data['exit_status'])
-                
+                                
+        # Check whether simulation time is a grid parameter
+        self.T_is_param = False
+        keys = self.PG.keys
+        
+        if type(keys) == list:
+            for key in keys:
+                if self.T_is_param: break                                                                
+                if type(key) == tuple:                 
+                    for k in key:
+                        if self.T_is_param: break                                                
+                        if 'T' in k: 
+                            T_is_param = True 
+                            break
+                else: 
+                    if key == 'T':
+                        self.T_is_param = True
+                        break
+        else:
+            if type(keys) == tuple:
+                for k in keys:
+                    if 'T' in k:
+                        self.T_is_param = True
+                        break
+            else: 
+                if keys == 'T':
+                    self.T_is_param = True
+
         # If dt_report is not None, set dt to dt_report
         # so that data an time array have the same dimension  
         if self.PG.base_parameter['dt_report'] is not None:
             dt = self.PG.base_parameter['dt_report']
         else:
             dt = self.PG.base_parameter['dt']
+                
+        # If simulation time is the same for all simulations
+        # time array only needs to be stored once                        
+        if not self.T_is_param:                            
+            T = self.PG.base_parameter['T']
+            n = int(T/dt)        
+            #TODO: t could possibly start not at dt
+            t = dt * np.arange(1, n+1, 1)       
+            output['t'] = t
+        else:
+            t = []
+            for param in self.PG.param_arr:                
+                T = param['T']
+                n = int(T/dt)        
+                #TODO: t could possibly start not at dt                                
+                t.append(dt * np.arange(1, n+1, 1))
+            output['t'] = t                                                                        
         
-        # Time only needs to get stored once        
-        T = self.PG.base_parameter['T']
-        n = int(T/dt)        
-        #TODO: t could possibly start not at dt
-        t = dt * np.arange(1, n+1, 1)       
-        output['t'] = t
-                                                            
         return output
 
     def pad_arrays(self, arr_list, exit_status_arr):
@@ -188,7 +225,7 @@ class GridLoader():
                                     
             for key, arr in output['FS'].items():            
 
-                arr = self.pad_arrays(arr, exit_status)                                                                
+                arr = self.pad_arrays(arr, exit_status)                                                                                
                 FS_grp.create_dataset(key, data = arr)
     
             for key, arr in output['CS'].items():            
@@ -225,17 +262,33 @@ class GridLoader():
         
         for key, arr in output['FS'].items():            
         
-            arr = self.pad_arrays(arr, exit_status)            
-            FS_grp.create_dataset(key, data = arr)
+            if not self.T_is_param:        
+                arr = self.pad_arrays(arr, exit_status)            
+                FS_grp.create_dataset(key, data = arr)
+            else:
+                grp = FS_grp.create_group(key)
+                for (a,_hash) in zip(arr, self.PG.hash_arr):
+                    grp.create_dataset(_hash, data = a)
 
         CS_grp = h5.create_group('CS')
 
         for key, arr in output['CS'].items():            
-            
-            arr = self.pad_arrays(arr, exit_status)
-            CS_grp.create_dataset(key, data = arr)
 
-        h5.create_dataset('t', data = output['t'])
+            if not self.T_is_param:                    
+                arr = self.pad_arrays(arr, exit_status)                
+                CS_grp.create_dataset(key, data = arr)
+            else:
+                grp = CS_grp.create_group(key)
+                for (a,_hash) in zip(arr, self.PG.hash_arr):
+                    grp.create_dataset(_hash, data = a)
+
+        if not self.T_is_param:                        
+            h5.create_dataset('t', data = output['t'])
+        else:
+            grp = h5.create_group('t')
+            for (t,_hash) in zip(output['t'], self.PG.hash_arr):
+                grp.create_dataset(_hash, data = t)
+                        
         h5.create_dataset('exit_status', data = exit_status) 
         
         h5.attrs['grid_filename'] = self.PG.filename + '.json'       
