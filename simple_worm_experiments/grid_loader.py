@@ -127,7 +127,7 @@ class GridLoader():
                     for k in key:
                         if self.T_is_param: break                                                
                         if 'T' in k: 
-                            T_is_param = True 
+                            self.T_is_param = True 
                             break
                 else: 
                     if key == 'T':
@@ -169,27 +169,32 @@ class GridLoader():
         
         return output
 
-    def pad_arrays(self, arr_list, exit_status_arr):
+    def pad_arrays(self, arr_list, exit_status_arr, T_list = None):
         '''
         Simulations which are failed need to be padded with nans.
         
         :param arr_list (list): 
         :param exit_status (int):
+        :param T_list (list): List with different simulation times        
         '''                        
         #TODO: Fail potential
         if self.PG.base_parameter['dt_report'] is not None:
             dt = self.PG.base_parameter['dt_report']
         else:
             dt = self.PG.base_parameter['dt']
-            
-        n = int(round(self.PG.base_parameter['T']/dt))        
-                                    
+
+        if not self.T_is_param:            
+            n = int(round(self.PG.base_parameter['T']/dt))        
+            n_list = len(arr_list)*[n]
+        else:
+            n_list = [int(round(T/dt)) for T in T_list]
+        
         # Desired shape
-        shape = (n,) + arr_list[0].shape[1:]
+        shape_list = [(n,) + arr_list[0].shape[1:] for n in n_list]                        
                                
         pad_arr_list = []
                                                         
-        for arr, exit_status in zip(arr_list, exit_status_arr):
+        for arr, exit_status, shape in zip(arr_list, exit_status_arr, shape_list):
             
             # If simulation succeded, no padding is needed
             if exit_status == 0:
@@ -221,17 +226,30 @@ class GridLoader():
             FS_grp = PG_grp.create_group('FS')
             CS_grp = PG_grp.create_group('CS')
         
+            if self.T_is_param:
+                T_list = [param['T'] for param in self.PG.param_arr]
+                
             exit_status = output['exit_status']
                                     
             for key, arr in output['FS'].items():            
 
-                arr = self.pad_arrays(arr, exit_status)                                                                                
-                FS_grp.create_dataset(key, data = arr)
+                if not self.T_is_param:        
+                    arr = self.pad_arrays(arr, exit_status)            
+                    FS_grp.create_dataset(key, data = arr)
+                else:
+                    arr = self.pad_arrays(arr, exit_status, T_list)                            
+                    grp = FS_grp.create_group(key)                                
+                    for (a,_hash) in zip(arr, self.PG.hash_arr):
+                        grp.create_dataset(_hash, data = a)
     
             for key, arr in output['CS'].items():            
                 
-                arr = self.pad_arrays(arr, exit_status)
-                CS_grp.create_dataset(key, data = arr)
+                if not self.T_is_param:                    
+                    CS_grp.create_dataset(key, data = arr)
+                else:
+                    grp = CS_grp.create_group(key)
+                    for (a,_hash) in zip(arr, self.PG.hash_arr):
+                        grp.create_dataset(_hash, data = a)
 
             PG_grp.create_dataset('t', data = output['t'])
             PG_grp.create_dataset('exit_status', data = exit_status)                
@@ -259,6 +277,9 @@ class GridLoader():
         FS_grp= h5.create_group('FS')
         
         exit_status = output['exit_status']
+
+        if self.T_is_param:
+            T_list = [param['T'] for param in self.PG.param_arr]
         
         for key, arr in output['FS'].items():            
         
@@ -266,7 +287,8 @@ class GridLoader():
                 arr = self.pad_arrays(arr, exit_status)            
                 FS_grp.create_dataset(key, data = arr)
             else:
-                grp = FS_grp.create_group(key)
+                arr = self.pad_arrays(arr, exit_status, T_list)                            
+                grp = FS_grp.create_group(key)                                
                 for (a,_hash) in zip(arr, self.PG.hash_arr):
                     grp.create_dataset(_hash, data = a)
 
@@ -275,7 +297,6 @@ class GridLoader():
         for key, arr in output['CS'].items():            
 
             if not self.T_is_param:                    
-                arr = self.pad_arrays(arr, exit_status)                
                 CS_grp.create_dataset(key, data = arr)
             else:
                 grp = CS_grp.create_group(key)
