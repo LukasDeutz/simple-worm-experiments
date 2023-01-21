@@ -123,20 +123,24 @@ class EPP(object):
         if Dt is not None:
             idx = t >= Dt
             phi_crop = phi[idx]
-            t = t[idx]
+            t_crop = t[idx]
                                                         
         # find zero crossings                
         idx_zc = np.abs(np.diff(np.sign(phi_crop))) == 2
                 
         # interpret zero crossings of the rotation angle
         # as the start point of a rotation period
-        t_start = t[:-1][idx_zc]
+        t_start = t_crop[:-1][idx_zc]
         
-        # approxomate roll frequency as average time period
+        # If phi has no zero crossing, set roll frequency to None
+        if t_start.size == 0:
+            f_avg, f_std = None, None
+        # Else, approxomate roll frequency as average time period
         # between zero crossings
-        f = 1.0 / np.diff(t_start)                        
-        f_avg = np.mean(f)
-        f_std = np.std(f) 
+        else:                    
+            f = 0.5 / np.diff(t_start)                        
+            f_avg = np.mean(f)
+            f_std = np.std(f) 
                           
         return f_avg, f_std, phi
         
