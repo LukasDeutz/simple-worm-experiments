@@ -1,7 +1,9 @@
+
 # Build-in imports
 from os.path import isfile
 import pickle
 from multiprocessing import Pool
+from pathlib import Path
 
 # Third party imports
 import matplotlib.pyplot as plt
@@ -10,162 +12,224 @@ import tqdm
 
 # Local imports
 from simple_worm.plot3d import generate_interactive_scatter_clip
-from simple_worm.plot3d_cosserat import plot_controls_CS_vs_FS, plot_single_strain_vs_control, plot_single_strain
+from simple_worm.plot3d_cosserat import plot_controls_CS_vs_FS, plot_strains 
+from simple_worm.plot3d_cosserat import plot_single_strain_vs_control, plot_single_strain
 
-from simple_worm_experiments.util import default_parameter, get_solver
-from simple_worm_experiments.roll.roll import RollManeuverExperiment, wrap_simulate_roll_maneuver
-from simple_worm_experiments.forward_undulation.plot_undulation import plot_trajectory
+from simple_worm_experiments.util import get_solver 
+from simple_worm_experiments.roll.roll import RollManeuverExperiment
+from simple_worm_experiments.experiment_post_processor import EPP
+from simple_worm_experiments.worm_videos import WormStudio
 
-def get_base_parameter():
-    
-    # Simulation parameter
-    N = 129
-    dt = 0.01
-    N_report = None
-    dt_report = None
-    
-    # Model parameter
-    external_force = ['rft']
-    rft = 'Whang'
-    use_inertia = False
-    
-    # Solver parameter
-    pi_alpha0_max = 0.9
-    pi_maxiter = 1000
-        
-    # Geometric parameter    
-    L0 = 1130 * 1e-6
-    r_max = 32 * 1e-6
-    rc = 'spheroid'
-    eps_phi = 1e-3
-    
-    # Material parameter
-    E = 1e5
-    G = E / (2 * (1 + 0.5))
-    eta = 1e-2 * E 
-    nu = 1e-2 * G
-    
-    # Fluid 
-    mu = 1e-3
-    
-    # Kinematic parameter
-    A0 = 4.0 # Undulation amplitude
-    lam0 = 1.5 # Undulation wavelength
-    f0 = 2.0 # Undulation frequency
-    
-    #------------------------------------------------------------------------------ 
-    # Relevant parameters to change for the roll maneuver
-    
-    # Roll maneuver parameter
-    A1 = 8.0
-    lam1 = 1.5
-    f1 = 2.0    
-       
-    T0 = 1.0 / f0
-    T1 = 1.0 / f1 
-       
-    T = round(4.0*T0, 1) # Simulation time
-    
-    t0 = 2*T0 # When the roll maneuver starts
-    
-    Delta_t = 0.5 * T1 # Roll maneuver duration
+from simple_worm_experiments.experiment import simulate_experiment, init_worm
+from numpy import dtype
 
-    #------------------------------------------------------------------------------ 
-     
-    # Sigmoid        
-    smo = True
-    a_smo = 150
-    du_smo = 0.05
+def base_parameter():
         
     parameter = {}
-             
-    parameter['N']  = N
-    parameter['dt'] = dt
-    parameter['T'] = T
-    parameter['N_report'] = N_report
-    parameter['dt_report'] = dt_report
+               
+    # Simulation parameter
+    parameter['N']  = 100
+    parameter['dt'] = 0.01
+    parameter['N_report'] = 100
+    parameter['dt_report'] = 0.01      
     
-    parameter['pi_alpha0'] = pi_alpha0_max            
-    parameter['pi_maxiter'] = pi_maxiter             
-                
-    parameter['external_force'] = external_force
-    parameter['use_inertia'] = use_inertia
-    parameter['rft'] = rft    
-        
-    parameter['L0'] = L0
-    parameter['r_max'] = r_max
-    parameter['rc'] = rc
-    parameter['eps_phi'] = eps_phi
-    
-    parameter['E'] = E
-    parameter['G'] = G
-    parameter['eta'] = eta
-    parameter['nu'] = nu
-    parameter['mu'] = mu
+    # Solver parameter
+    parameter['pi'] = False
+    parameter['pi_alpha0'] = 0.9            
+    parameter['pi_maxiter'] = 1000             
+    parameter['fdo'] = {1: 2, 2:2}
 
-    parameter['A0'] = A0
-    parameter['lam0'] = lam0
-    parameter['f0'] = f0
-        
-    parameter['A1'] = A1
-    parameter['lam1'] = lam1
-    parameter['f1'] = f1    
+    # Model parameter
+    parameter['use_inertia'] = False
     
-    parameter['T'] = T    
-    parameter['t0'] = t0
-    parameter['Delta_t'] = Delta_t   
+    # Fluid parameter                
+    parameter['external_force'] = ['rft']
+    parameter['rft'] = 'Whang'
+    parameter['mu'] = 1e-3
+    
+    # Geometric parameter            
+    parameter['L0'] = 1130 * 1e-6
+    parameter['r_max'] = 32 * 1e-6
+    parameter['rc'] = 'spheroid'
+    parameter['eps_phi'] = 1e-3
         
-    parameter['smo'] = smo
-    parameter['a_smo'] = a_smo
-    parameter['du_smo'] = du_smo
+    # Material parameter
+    parameter['E'] = 1e5
+    parameter['G'] = parameter['E'] / (2 * (1 + 0.5))
+    parameter['eta'] = 1e-2 * parameter['E'] 
+    parameter['nu'] = 1e-2 * parameter['G']
+        
+    # Muscle parameter        
+    parameter['smo'] = False
+    parameter['Ds'] = 1.0/150
+    parameter['s0'] = 0.05
+    
+    parameter['mts'] = True
+    parameter['tau_on'] = 0.01
+    parameter['tau_off'] = 0.01    
+    parameter['Dt_on'] = 3*parameter['tau_on']
+    parameter['Dt_off'] = 3*parameter['tau_off']
+        
+    return parameter
+
+def repetitious_roll_parameter():
+
+    parameter = base_parameter()
+    
+    # Kinematic parameter
+    parameter['A_dv'] = 3.0
+    parameter['f_dv'] = 5.0    
+
+    parameter['A_lr'] = 3.0
+    parameter['f_lr'] = 5.0    
+    parameter['phi'] = np.pi/2
+
+    parameter['Ds_h'] = 1.0/16
+    parameter['s0_h'] = 0.75
+    
+    return parameter
+
+def single_roll_parameter():
+    
+    parameter = base_parameter()
+
+    parameter['T'] = 1.0
+        
+    # Kinematic parameter        
+    parameter['A_static'] = 3.0
+    parameter['lam_static'] = 1.5 
+    parameter['T_init'] = 0.5
+
+    parameter['A_dv'] = 5.0
+    parameter['f_dv'] = 8.0    
+    parameter['A_lr'] = 5.0
+    parameter['f_lr'] = 8.0    
+    parameter['phi'] = np.pi/2
+    
+    # Roll duration
+    parameter['Dt_roll'] = 0.75 / parameter['f_dv']
+
+    # Muscle parmaeter    
+    parameter['Ds_h'] = 1.0/16
+    parameter['s0_h'] = 0.75
     
     return parameter
            
-def test_roll_maneuver():
+def test_continuous_roll_maneuver(make_video = True, 
+        active_clip = True, 
+        plot = True):
         
-    parameter = get_base_parameter()
-    
-    parameter['N']  = 257
+    parameter = repetitious_roll_parameter()
+    parameter['T'] = 2.5
     parameter['dt'] = 0.01
-    parameter['pi'] = False
+    parameter['A_dv'] = 6.0
     
     pbar = tqdm.tqdm(desc = 'RME:')    
-    RME = RollManeuverExperiment(parameter['N'], parameter['dt'], solver = get_solver(parameter), quiet = True)        
-    FS, CS, _, e = RME.simulate_roll_maneuver(parameter, pbar)
+    RME = RollManeuverExperiment()        
+    
+    worm = init_worm(parameter)
+
+    CS = RME.continuous_roll(worm, parameter)
+        
+    if False:    
+        plot_strains(CS.to_numpy())
+        plt.show()
+
+    FS, CS, _, e = simulate_experiment(worm, parameter, CS, pbar = pbar)
 
     if e is not None:
         raise e
 
     print(f'Picard iteration converged at every time step: {np.all(FS.pic)}')
+        
+    
+    if make_video:        
+        WS = WormStudio(FS)        
+        output_path = Path(f'../videos/continuous_A_{parameter["A_dv"]}_f_{parameter["f_dv"]}_roll')
+        WS.generate_clip(output_path, add_trajectory = False, add_frame_vectors = False)        
+    if active_clip:
+        generate_interactive_scatter_clip(FS, 500, n_arrows=25)    
+    if plot:
+        plot_roll_maneuver(FS, CS, parameter)
+    
+    
+    
+            
+    return
+
+def comp_roll_frequency(FS, parameter):
+
+    # Compute roll frequency
+    s_arr = np.linspace(0, 1, parameter['N'])    
+    s0_h = parameter['s0_h']
+    s_mask = s_arr >= (1 - s0_h)
+        
+    d2 = FS.e2
+    
+    d1_ref = FS.e1[0, :, 0] 
+    d2_ref = FS.e2[0, :, 0] 
+    d3_ref = FS.e3[0, :, 0] 
+    
+    d123_ref = np.vstack((d1_ref, d2_ref, d3_ref))
+        
+    f_avg, f_std, phi = EPP.comp_roll_frequency(d2, 
+        FS.times, 
+        d123_ref, 
+        s_mask = s_mask, 
+        Dt = 0.25)
+    
+    return f_avg, f_std, phi
+    
+
+def test_single_roll_maneuver():
+
+    parameter = single_roll_parameter()
+    parameter['dt'] = 0.001
+    
+    pbar = tqdm.tqdm(desc = 'RME:')    
+    RME = RollManeuverExperiment()        
+    
+    worm = init_worm(parameter)
+
+    CS = RME.single_roll(worm, parameter)
+    
+    if True:    
+        plot_strains(CS.to_numpy())
+        plt.show()
+
+    FS, CS, _, e = simulate_experiment(worm, parameter, CS, pbar = pbar)
+
+    if e is not None:
+        raise e
+
+    print(f'Picard iteration converged at every time step: {np.all(FS.pic)}')
+
     
     plot_roll_maneuver(FS, CS, parameter)
-    
-    return
+        
              
 def plot_roll_maneuver(FS, CS, parameter):
+            
+    # Plot controls and real strains
+    #plot_controls_CS_vs_FS(CS, FS, parameter['dt'])
+        
+    f_avg, f_std, phi = comp_roll_frequency(FS, parameter)
     
-    # Creates a video
-    #generate_interactive_scatter_clip(FS, 500, n_arrows=25)
-
-    # Plots all controls and strains
-    plot_controls_CS_vs_FS(CS, FS, parameter['dt'])
-    
-    # Plot single control and strain
-    k1_0 = CS.Omega[:, 0, :]
-    k1 = FS.Omega[:, 0, :]    
-    plot_single_strain_vs_control(k1_0, k1, dt = parameter['dt'])
-    
-    # Plot single strain or control
-    plot_single_strain(k1, dt = parameter['dt'])
-    
+    fig = plt.figure()
+    ax = plt.subplot(111)
+    ax.plot(FS.times, phi)
+        
     plt.show()
     
+    # print(f'f_head: {parameter["f_dv"]}')   
+    # print(f'f_avg: {f_avg:.2f}')
+    # print(f'f_std: {f_std:.3f}')
+        
     return
-    
-                                  
+                                      
 if __name__ == "__main__":
     
-    test_roll_maneuver()
-    
+    test_continuous_roll_maneuver(make_video=False, active_clip=False, plot=True)    
+    #test_single_roll_maneuver()
     print('Finished')
 
