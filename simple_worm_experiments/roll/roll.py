@@ -37,7 +37,56 @@ class RollManeuverExperiment():
 
         return lambda t: 1.0 / (1 + np.exp( ( t - t0) / tau))
 
-                                        
+    @staticmethod
+    def sig_m_on_expr(t0, tau):
+
+        return Expression('1 / ( 1 + exp(- ( t - t0) / tau))', 
+            degree = 1, 
+            t = 0, 
+            t0 = t0, 
+            tau = tau)
+
+    @staticmethod
+    def sig_m_off_expr(t0, tau):
+
+        return Expression('1 / ( 1 + exp( ( t - t0) / tau))', 
+            degree = 1, 
+            t = 0, 
+            t0 = t0, 
+            tau = tau)
+        
+    @staticmethod
+    def sig_head_expr(Ds, s0):
+        
+        return Expression('1 / ( 1 + exp(- (x[0] - s0) / Ds ) )', 
+            degree = 1, 
+            Ds = Ds, 
+            s0 = s0)
+    
+    @staticmethod
+    def sig_tale_expr(Ds, s0):
+            
+            # sigmoid tale
+        return Expression('1 / ( 1 + exp(  (x[0] - s0) / Ds) )', 
+            degree = 1, 
+            Ds = Ds, 
+            s0 = s0)                                 
+                       
+    @staticmethod
+    def plot_sigmoid(worm, sh_dv, st_dv):
+        V = worm.function_spaces['dot_w_M_rot']
+        sh = Function(V)
+        st = Function(V)
+        sh.assign(sh_dv)
+        st.assign(st_dv)
+        sh_arr = sh.vector().get_local()
+        st_arr = st.vector().get_local()
+        import matplotlib.pyplot as plt
+        plt.plot(sh_arr)        
+        plt.plot(st_arr)                
+        plt.show()
+        
+                                                
     @staticmethod
     def continuous_roll(worm, parameter):
         '''
@@ -50,7 +99,7 @@ class RollManeuverExperiment():
         # Read in parameters        
         T = parameter['T']
                 
-        smo, mts = parameter['smo'], parameter['mts']        
+        mts = parameter['mts']        
         
         A_dv, f_dv = parameter['A_dv'], parameter['f_dv']
         A_lr, f_lr = parameter['A_lr'], parameter['f_lr']
@@ -59,47 +108,50 @@ class RollManeuverExperiment():
         w_lr = 2*np.pi*f_lr
         
         phi = parameter['phi']
-                                                    
-        if mts: #Muscles switch on and off on finite timescale            
+              
+        # Muscles switch on and off
+        # on a finit time scale
+        if mts: 
             tau_on = parameter['tau_on']
             Dt_on = parameter['Dt_on']
-            m_on = Expression('1 / ( 1 + exp(- ( t - Dt) / tau))', degree = 1, t = 0, Dt = Dt_on, tau = tau_on)
+            m_on = RollManeuverExperiment.sig_m_on_expr(Dt_on, tau_on)
         else:
             m_on = Expression('1', degree = 1)
-        
-        if smo: # Smooth muscle onset        
-            Ds = parameter['Ds']
-            s0 = parameter['s0']            
-            # sigmoid head
-            sh = Expression('1 / ( 1 + exp(- (x[0] - s0) / Ds ) )', degree = 1, Ds=Ds, s0 = s0) 
-            # sigmoid tale
-            st = Expression('1 / ( 1 + exp(  (x[0] - 1 + s0) / Ds) )', degree = 1, Ds=Ds, s0 = s0)                                 
-        else:
-            st = Expression('1', degree = 1)
-            sh = Expression('1', degree = 1)
-               
+                                                       
         Ds_h = parameter['Ds_h']
         s0_h = parameter['s0_h']
 
-        st_lr = Expression('1 / ( 1 + exp(  (x[0] - 1 + s0) / Ds) )', degree = 1, Ds=Ds_h, s0 = s0_h) 
-        st_dv = Expression('1 / ( 1 + exp(  (x[0] - 1 + s0) / Ds) )', degree = 1, Ds=Ds_h, s0 = s0_h) 
-                           
-                           
-        Omega_expr = Expression(("m_on*sh*st_dv*A1*sin(w1*t)", 
-                                 "m_on*sh*st_lr*A2*sin(w2*t + phi)",
-                                 "0"), 
-                                 degree=1,
-                                 t = 0,
-                                 A1 = A_dv,
-                                 w1 = w_dv,
-                                 A2 = A_lr,
-                                 w2 = w_lr,
-                                 phi = phi,                                                                  
-                                 st = st,
-                                 sh = sh,
-                                 st_lr = st_lr,
-                                 st_dv = st_dv,
-                                 m_on = m_on)   
+        Ds_t = parameter['Ds_t']
+        s0_t = parameter['s0_t']
+
+        if Ds_h is not None:
+            sh_dv = RollManeuverExperiment.sig_head_expr(Ds_h, s0_h)
+            sh_lr = RollManeuverExperiment.sig_head_expr(Ds_h, s0_h)        
+        else: 
+            sh_dv = Expression('1', degree = 1)
+            sh_lr = Expression('1', degree = 1)
+        
+        if Ds_t is not None:        
+            st_dv = RollManeuverExperiment.sig_tale_expr(Ds_t, s0_t)
+            st_lr = RollManeuverExperiment.sig_tale_expr(Ds_t, s0_t)
+        else:
+            st_dv = Expression('1', degree = 1)
+            st_lr = Expression('1', degree = 1)
+                                                      
+        Omega_expr = Expression(("m_on*sh_dv*st_dv*A1*sin(w1*t)", 
+            "m_on*sh_dv*st_dv*A2*sin(w2*t+phi)", "0"), 
+            degree=1, 
+            t = 0, 
+            A1 = A_dv,
+            w1 = w_dv,
+            A2 = A_lr,
+            w2 = w_lr,
+            phi = phi,                                                                  
+            sh_dv = sh_dv,            
+            sh_lr = sh_lr,
+            st_dv = st_dv,            
+            st_lr = st_lr,
+            m_on = m_on)   
                                 
         CS = []
 
@@ -141,7 +193,7 @@ class RollManeuverExperiment():
         n = len(t_arr)
         s_arr = np.linspace(0, 1, N)
         
-        # gradual muscle onset at the tip of the head
+        # no muscles at the tip of the head
         # and the tale
         smo = parameter['smo'] 
 
