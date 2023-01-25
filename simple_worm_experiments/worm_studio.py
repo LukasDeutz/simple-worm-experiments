@@ -25,7 +25,6 @@ from wormlab3d.postures.plot_utils import FrameArtistMLab
 from wormlab3d.trajectories.util import smooth_trajectory
 
 from simple_worm.frame import FrameSequenceNumpy
-from scipy.optimize._basinhopping import kwargs
 
 # Off-screen rendering
 mlab.options.offscreen = True
@@ -55,6 +54,7 @@ class WormStudio():
         
         dt = FS.times[1] - FS.times[0] 
         self.fps = 1.0 / dt
+        self.t = FS.times
         
         self.lengths = self._comp_worm_length_from_centreline()
         
@@ -194,7 +194,8 @@ class WormStudio():
             fig_height = 900,
             rel_camera_distance = 2.0,
             azim_offset = 0.0,
-            revolution_rate = 1 / 3):
+            revolution_rate = 1 / 3,
+            T_max = None):
         """
         Generate a basic exemplar video showing a rotating 3D worm along a trajectory
         and camera images with overlaid 2D midline reprojections.
@@ -234,10 +235,15 @@ class WormStudio():
         )
     
         logger.info('Rendering frames.')
+                        
+        if T_max is not None:
+            n = np.sum(self.t <= T_max)
+        else:
+            n = self.n
         
-        for i in range(self.n):
+        for i in range(n):
             if i > 0 and i % 50 == 0:
-                logger.info(f'Rendering frame {i + 1}/{self.n}.')
+                logger.info(f'Rendering frame {i + 1}/{n}.')
     
             # Update the frame and write to stream
             frame = update_fn(i)
