@@ -268,7 +268,7 @@ class WormStudio():
         global data_dir
         data_dir = global_data_dir
         
-        global overwrite
+        global output_dir
         output_dir = global_output_dir
         
         global overwrite
@@ -282,6 +282,8 @@ class WormStudio():
         # worker_counter.value += 1
     
         return
+#------------------------------------------------------------------------------ 
+# Static methods for parallelized clip generation
 
     @staticmethod
     def wrap_generate_clip(input_tup):
@@ -308,7 +310,8 @@ class WormStudio():
                 
         # Unpack input and load FS
         FS_name, video_name = input_tup
-        FS = pickle.load(data_dir / FS_name, 'r')                    
+                
+        sim_data = pickle.load(open(str(data_dir / 'simulations' / FS_name), 'rb'))                    
         video_path = output_dir / video_name  
         
         if not overwrite:    
@@ -318,7 +321,7 @@ class WormStudio():
                 return
     
         #logger.info(f'Task {task_number}: Start rendering video')                                                            
-        WS = WormStudio(FS)
+        WS = WormStudio(sim_data['FS'])
         WS.generate_clip(video_path, **kwargs)
                                 
         #logger.info(f'Task {task_number}: Saved video to {video_path}.')         
@@ -336,7 +339,7 @@ class WormStudio():
                 
         pool = mp.Pool(N_worker, WormStudio._init_worker, initargs = (data_dir, output_dir, overwrite, kwargs))
         
-        for output in pool(WormStudio.wrap_generate_clip, zip(FS_names, video_names)):
+        for output in pool.imap(WormStudio.wrap_generate_clip, zip(FS_names, video_names)):
             pass
         
         pass
