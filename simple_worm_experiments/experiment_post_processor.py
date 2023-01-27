@@ -98,9 +98,9 @@ class EPP(object):
         # Compute angles from cartesian coordinates
         phi = np.arctan2(x,y)
         theta = np.arccos(z)
-        
+                
         return phi, theta 
-    
+        
     @staticmethod
     def comp_roll_frequency(d2, t, d123_ref, s_mask = None, Dt = None):
         '''
@@ -144,3 +144,50 @@ class EPP(object):
                           
         return f_avg, f_std, phi
         
+
+    @staticmethod
+    def comp_roll_frequency_from_euler_angle(alpha, t, Dt = None):
+        '''
+        Compute roll frequency from continuous roll experiment
+        
+        n = number of time steps
+        N = number of body points 
+        
+        :param alpha (np.array n x 3 x N): roll angle 
+        :param s_mask (np.array N): Boolean array to mask spatial dimension 
+        :param Dt (float): Initiation phase. 
+        
+        :return f_avg (float): Average roll frequency
+        :return f_std (float): Std roll frequency         
+        '''        
+                    
+        # Crop initiation phase of the experiment                        
+        if Dt is not None:
+            idx = t >= Dt
+            alpha_crop = alpha[idx]
+            t_crop = t[idx]
+        
+        # map alpha to range -pi to pi
+        alpha_crop = alpha_crop % (2*np.pi) - np.pi
+        
+        avg_alpha = alpha_crop.mean(axis = 1)
+                        
+        # find zero crossings                
+        idx_zc = np.abs(np.diff(np.sign(avg_alpha))) == 2
+                
+        # interpret zero crossings of the rotation angle
+        # as the start point of a rotation period
+        t_start = t_crop[:-1][idx_zc]
+        
+        # If phi has no zero crossing, set roll frequency to None
+        if t_start.size == 0:
+            f_avg, f_std = None, None
+        # Else, approxomate roll frequency as average time period
+        # between zero crossings
+        else:                    
+            f = 0.5 / np.diff(t_start)                        
+            f_avg = np.mean(f)
+            f_std = np.std(f) 
+                          
+        return f_avg, f_std
+
