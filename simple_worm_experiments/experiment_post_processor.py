@@ -124,6 +124,9 @@ class EPP(object):
             idx = t >= Dt
             phi_crop = phi[idx]
             t_crop = t[idx]
+        else: 
+            phi_crop = phi
+            t_crop = t
                                                         
         # find zero crossings                
         idx_zc = np.abs(np.diff(np.sign(phi_crop))) == 2
@@ -166,6 +169,9 @@ class EPP(object):
             idx = t >= Dt
             alpha_crop = alpha[idx]
             t_crop = t[idx]
+        else:
+            alpha_crop = alpha
+            t_crop = t
         
         # map alpha to range -pi to pi
         alpha_crop = alpha_crop % (2*np.pi) - np.pi
