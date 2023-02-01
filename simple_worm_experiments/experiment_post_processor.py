@@ -15,7 +15,52 @@ class EPP(object):
         '''
         Constructor
         '''
-           
+        pass
+    
+    @staticmethod
+    def centreline_pca(X):
+        '''
+        Computes principal directions and components
+        of the centreline coordinates pooled over time 
+        and body position
+        
+        :param X (np.ndarray (n x 3 x N)): centreline coordinates
+        '''
+                
+        # Reformat into 2D array (3 x (n x N))
+        X = np.swapaxes(X, 1, 2)                
+        X = X.reshape((X.shape[0]*X.shape[1], X.shape[2]))
+        
+        # Centre coordinates around mean 
+        x_avg = X.mean(axis = 0)         
+        X -= x_avg[None, :]
+
+        C = np.matmul(X.T, X)            
+        lam, w =  np.linalg.eig(C)
+                    
+        return lam, w, x_avg
+            
+    @staticmethod
+    def project_into_pca_plane(X):
+        
+        lam, w, x_avg = EPP.centreline_pca(X)
+                
+        # Principal directions 2 and 3
+        idx_arr = lam.argsort()[::-1]
+        w = w[:, idx_arr]
+        
+        w2 = w[0, :]
+        w3 = w[2, :] 
+        
+        # Centre
+        X = X - x_avg[None, :, None]
+        
+        # Project        
+        x = np.sum(X*w2[None, :, None], axis = 1) 
+        y = np.sum(X*w3[None, :, None], axis = 1)
+                                        
+        return x, y
+                       
     @staticmethod           
     def compute_com(x, dt):
         '''Compute the center of mass and its velocity as a function of time'''
@@ -38,7 +83,6 @@ class EPP(object):
         is defined as the average direction of local 
         d2 body frame vector. 
                 
-        :param FS (FrameSequenceNumpy): Frame sequence
         :param s_mask (np.array): Boolean array to mask spatial dimension
         :return d2_avg (np.array): Average d2 direction
         '''
@@ -196,4 +240,9 @@ class EPP(object):
             f_std = np.std(f) 
                           
         return f_avg, f_std
+
+    def compute_point_trajectory(self):
+        
+        x 
+        
 
