@@ -144,9 +144,37 @@ class EPP(object):
         theta = np.arccos(z)
                 
         return phi, theta 
+
+    @staticmethod        
+    def comp_roll_frequency(angle, t):
+        '''
+        Compute roll frequency from roll angle time sequence
         
+        :param angle (np.ndarray): roll angle in range [-pi, pi]
+        :param t  (np.ndarray): time series
+        '''
+
+        # find zero crossings                
+        idx_zc = np.abs(np.diff(np.sign(angle))) == 2
+                
+        # interpret zero crossings of the rotation angle
+        # as the start point of a rotation period
+        t_start = t[:-1][idx_zc]
+        
+        # If angle has no zero crossing, set roll frequency to None
+        if t_start.size == 0:
+            f_avg, f_std = np.NaN, np.NaN
+        # Else, approxomate roll frequency as average time period
+        # between zero crossings
+        else:                    
+            f = 0.5 / np.diff(t_start)                        
+            f_avg = np.mean(f)
+            f_std = np.std(f) 
+                          
+        return f_avg, f_std
+                
     @staticmethod
-    def comp_roll_frequency(d2, t, d123_ref, s_mask = None, Dt = None):
+    def comp_roll_frequency_from_spherical_angle(d2, t, d123_ref, s_mask = None, Dt = None):
         '''
         Compute roll frequency from infinite roll experiment
         
@@ -171,27 +199,11 @@ class EPP(object):
         else: 
             phi_crop = phi
             t_crop = t
-                                                        
-        # find zero crossings                
-        idx_zc = np.abs(np.diff(np.sign(phi_crop))) == 2
-                
-        # interpret zero crossings of the rotation angle
-        # as the start point of a rotation period
-        t_start = t_crop[:-1][idx_zc]
-        
-        # If phi has no zero crossing, set roll frequency to None
-        if t_start.size == 0:
-            f_avg, f_std = None, None
-        # Else, approxomate roll frequency as average time period
-        # between zero crossings
-        else:                    
-            f = 0.5 / np.diff(t_start)                        
-            f_avg = np.mean(f)
-            f_std = np.std(f) 
-                          
+            
+        f_avg, f_std = EPP.comp_roll_frequency(phi_crop, t_crop)
+                                                                                                  
         return f_avg, f_std, phi
         
-
     @staticmethod
     def comp_roll_frequency_from_euler_angle(alpha, t, Dt = None):
         '''
@@ -211,38 +223,13 @@ class EPP(object):
         # Crop initiation phase of the experiment                        
         if Dt is not None:
             idx = t >= Dt
-            alpha_crop = alpha[idx]
-            t_crop = t[idx]
-        else:
-            alpha_crop = alpha
-            t_crop = t
+            alpha = alpha[idx]
+            t = t[idx]
         
         # map alpha to range -pi to pi
-        alpha_crop = alpha_crop % (2*np.pi) - np.pi
+        avg_alpha = alpha.mean(axis = 1)
+        avg_alpha = avg_alpha % (2*np.pi) - np.pi        
         
-        avg_alpha = alpha_crop.mean(axis = 1)
-                        
-        # find zero crossings                
-        idx_zc = np.abs(np.diff(np.sign(avg_alpha))) == 2
-                
-        # interpret zero crossings of the rotation angle
-        # as the start point of a rotation period
-        t_start = t_crop[:-1][idx_zc]
-        
-        # If phi has no zero crossing, set roll frequency to None
-        if t_start.size == 0:
-            f_avg, f_std = None, None
-        # Else, approxomate roll frequency as average time period
-        # between zero crossings
-        else:                    
-            f = 0.5 / np.diff(t_start)                        
-            f_avg = np.mean(f)
-            f_std = np.std(f) 
-                          
+        f_avg, f_std = EPP.comp_roll_frequency(avg_alpha, t)
+                                                          
         return f_avg, f_std
-
-    def compute_point_trajectory(self):
-        
-        x 
-        
-
