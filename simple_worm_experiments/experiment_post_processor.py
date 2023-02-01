@@ -162,7 +162,7 @@ class EPP(object):
         t_start = t[:-1][idx_zc]
         
         # If angle has no zero crossing, set roll frequency to None
-        if t_start.size == 0:
+        if t_start.size <= 1.0:
             f_avg, f_std = np.NaN, np.NaN
         # Else, approxomate roll frequency as average time period
         # between zero crossings
