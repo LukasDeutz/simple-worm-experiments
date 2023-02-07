@@ -7,12 +7,61 @@ Created on 6 Jan 2023
 # Build-in imports
 from os.path import isfile, join
 import pickle
+from fenics import Expression
+import numpy as np
 
 # Local imports
 from simple_worm.rod.cosserat_rod_2_test import CosseratRod_2
 from simple_worm_experiments.util import dimensionless_MP, get_solver, save_output
 
 from mp_progress_logger import FWException
+            
+class Experiment():      
+      
+    @staticmethod   
+    def sig_m_on(t0, tau):
+        
+        return lambda t: 1.0 / (1 + np.exp(-( t - t0 ) / tau))
+    
+    @staticmethod   
+    def sig_m_off(t0, tau):
+
+        return lambda t: 1.0 / (1 + np.exp( ( t - t0) / tau))
+
+    @staticmethod
+    def sig_m_on_expr(t0, tau):
+
+        return Expression('1 / ( 1 + exp(- ( t - t0) / tau))', 
+            degree = 1, 
+            t = 0, 
+            t0 = t0, 
+            tau = tau)
+
+    @staticmethod
+    def sig_m_off_expr(t0, tau):
+
+        return Expression('1 / ( 1 + exp( ( t - t0) / tau))', 
+            degree = 1, 
+            t = 0, 
+            t0 = t0, 
+            tau = tau)
+        
+    @staticmethod
+    def sig_head_expr(Ds, s0):
+        
+        return Expression('1 / ( 1 + exp(- (x[0] - s0) / Ds ) )', 
+            degree = 1, 
+            Ds = Ds, 
+            s0 = s0)
+    
+    @staticmethod
+    def sig_tale_expr(Ds, s0):
+            
+        return Expression('1 / ( 1 + exp(  (x[0] - s0) / Ds) )', 
+            degree = 1, 
+            Ds = Ds, 
+            s0 = s0) 
+
       
       
 def init_worm(parameter):
