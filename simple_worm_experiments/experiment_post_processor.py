@@ -5,7 +5,6 @@ Created on 10 Jan 2023
 '''
 import numpy as np
 
-
 class EPP(object):
     '''
     Class to post process and analyse simulation results.
@@ -37,29 +36,52 @@ class EPP(object):
 
         C = np.matmul(X.T, X)            
         lam, w =  np.linalg.eig(C)
+
+        # order from big to small
+        idx_arr = lam.argsort()[::-1]
+        lam = lam[idx_arr]        
+        w = w[:, idx_arr]
                     
         return lam, w, x_avg
             
     @staticmethod
-    def project_into_pca_plane(X):
+    def project_into_pca_plane(X, 
+            w2_ref = None,
+            w3_ref = None,
+            output_w = False):
         
-        lam, w, x_avg = EPP.centreline_pca(X)
+        _, w, x_avg = EPP.centreline_pca(X)
                 
-        # Principal directions 2 and 3
-        idx_arr = lam.argsort()[::-1]
-        w = w[:, idx_arr]
+        # Principal directions 2 and 3        
+        w2 = w[:, 1]
+        w3 = w[:, 2] 
         
-        w2 = w[0, :]
-        w3 = w[2, :] 
-        
+        # If reference direction is given 
+        # then we choose the sign of eigenvector 
+        # such that its angle with respect 
+        # direction to the reference is smaller
+        # than 90 degrees
+        if w2_ref is not None:
+            
+            if np.dot(w2, w2_ref) < np.dot(w2, w3_ref):
+                tmp = w2
+                w2 = w3
+                w3 = tmp
+                        
+            dp = np.dot(w2, w2_ref)
+            if dp < 0: w2 = -w2
+            dp = np.dot(w3, w3_ref)
+            if dp < 0: w3 = -w3
+                
         # Centre
         X = X - x_avg[None, :, None]
         
         # Project        
         x = np.sum(X*w2[None, :, None], axis = 1) 
         y = np.sum(X*w3[None, :, None], axis = 1)
-                                        
-        return x, y
+
+        if not output_w: return x, y
+        else: return x, y, w2, w3
                        
     @staticmethod           
     def compute_com(x, dt):
