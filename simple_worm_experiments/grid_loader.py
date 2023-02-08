@@ -96,24 +96,22 @@ class GridLoader():
         output = {}                                
         output['FS'] = {key: [] for key in FS_keys}        
         output['CS'] = {key: [] for key in CS_keys}                                                            
+        output['t'] = []
         
         output['exit_status'] = []
-        
-                
+                        
         for filepath in self.sim_filepaths: 
-        
-            data = open(filepath, 'rb')
-            
-            data = pickle.load(data)
+                    
+            data = pickle.load(open(filepath, 'rb'))
 
             for key in FS_keys:
                 
                 # TODO: Do dot_W_lin and dot_W_rot need to be handled differently?
                 output['FS'][key].append(getattr(data['FS'], key))
-
-
+            
             for key in CS_keys: output['CS'][key].append(getattr(data['CS'], key))
             
+            output['t'].append(data['FS'].times)
             output['exit_status'].append(data['exit_status'])
                                 
         # Check whether simulation time is a grid parameter
@@ -142,30 +140,12 @@ class GridLoader():
             else: 
                 if keys == 'T':
                     self.T_is_param = True
-
-        # If dt_report is not None, set dt to dt_report
-        # so that data an time array have the same dimension  
-        if self.PG.base_parameter['dt_report'] is not None:
-            dt = self.PG.base_parameter['dt_report']
-        else:
-            dt = self.PG.base_parameter['dt']
                 
         # If simulation time is the same for all simulations
         # time array only needs to be stored once                        
         if not self.T_is_param:                            
-            T = self.PG.base_parameter['T']
-            n = int(T/dt)        
             #TODO: t could possibly start not at dt
-            t = dt * np.arange(1, n+1, 1)       
-            output['t'] = t
-        else:
-            t = []
-            for param in self.PG.param_arr:                
-                T = param['T']
-                n = int(T/dt)        
-                #TODO: t could possibly start not at dt                                
-                t.append(dt * np.arange(1, n+1, 1))
-            output['t'] = t                                                                        
+            output['t'] = output['t'][0]
         
         return output
 
