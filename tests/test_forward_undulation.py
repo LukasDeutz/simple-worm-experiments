@@ -1,7 +1,5 @@
-# Build-in imports
-from os.path import isfile
-
 # Third party imports
+from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import tqdm
@@ -9,149 +7,185 @@ from scipy.integrate import trapezoid
 
 # Local imports
 from simple_worm.plot3d import generate_interactive_scatter_clip
-from simple_worm.plot3d_cosserat import plot_controls_CS_vs_FS, plot_single_strain_vs_control
+from simple_worm.plot3d_cosserat import plot_CS_vs_FS, plot_S
 
-from simple_worm_experiments.util import default_parameter, get_solver, comp_angle_of_attack
-from simple_worm_experiments.forward_undulation.undulation import ForwardUndulationExperiment
-from simple_worm_experiments.forward_undulation.plot_undulation import plot_trajectory
+from simple_worm_experiments.experiment import simulate_experiment, init_worm
+from simple_worm_experiments.forward_undulation.undulation import UndulationExperiment
+from simple_worm_experiments.experiment_post_processor import EPP
+from simple_worm_experiments.worm_studio import WormStudio
 
-def get_test_parameter():
+#------------------------------------------------------------------------------ 
+# Parameter
 
-    # Simulation parameter
-    N = 100
-    dt = 0.01
-    T = 2.5
-    N_report = None
-    dt_report = None
-    
-    # Model parameter
-    external_force = ['rft']
-    rft = 'Whang'
-    use_inertia = False
-    
-    # Solver parameter
-    pi_alpha0 = 0.9
-    pi_maxiter = 1000
-    fdo = {1: 2, 2:2}
-        
-    # Geometric parameter    
-    L0 = 1130 * 1e-6
-    r_max = 32 * 1e-6
-    rc = 'spheroid'
-    eps_phi = 1e-3
-    
-    # Material parameter
-    E = 1e5
-    G = E / (2 * (1 + 0.5))
-    eta = 1e-2 * E 
-    nu = 1e-2 * G
-    
-    # Fluid 
-    mu = 1e-3
-    
-    # Kinematic parameter
-    A = 4.0
-    lam = 1.5
-    f = 2.0    
-    smo = True
-    a_smo = 150
-    du_smo = 0.05
-
-    gmo_t = True
-    tau_on = 0.05
-    Dt_on = 3*tau_on
-        
+def base_parameter():
+                    
     parameter = {}
           
-    parameter['N']  = N
-    parameter['dt'] = dt
-    parameter['T'] = T
-    parameter['N_report'] = N_report
-    parameter['dt_report'] = dt_report
-        
-    parameter['pi_alpha0'] = pi_alpha0            
-    parameter['pi_maxiter'] = pi_maxiter             
-    parameter['fdo'] = fdo
-                
-    parameter['external_force'] = external_force
-    parameter['use_inertia'] = use_inertia
-    parameter['rft'] = rft    
-        
-    parameter['L0'] = L0
-    parameter['r_max'] = r_max
-    parameter['rc'] = rc
-    parameter['eps_phi'] = eps_phi
-    
-    parameter['E'] = E
-    parameter['G'] = G
-    parameter['eta'] = eta
-    parameter['nu'] = nu
-    parameter['mu'] = mu
-        
-    parameter['A'] = A
-    parameter['lam'] = lam
-    parameter['f'] = f    
-    parameter['smo'] = smo
-    parameter['a_smo'] = a_smo
-    parameter['du_smo'] = du_smo
+    # Simulation parameter                      
+    parameter['N']  = 100
+    parameter['dt'] = 0.01
+    parameter['T'] = 2.5
+    parameter['N_report'] = None
+    parameter['dt_report'] = None
 
-    parameter['gmo_t'] = gmo_t
-    parameter['tau_on'] = tau_on
-    parameter['Dt_on'] = Dt_on
-        
+    # Solver parameter        
+    parameter['pi_alpha0'] = 0.9            
+    parameter['pi_maxiter'] = 1000             
+    parameter['fdo'] = {1: 2, 2:2}
+
+    # Model parameter    
+    parameter['use_inertia'] = False
+
+    # Fluid parameter
+    parameter['external_force'] = ['rft']
+    parameter['rft'] = 'Whang'
+    parameter['mu'] = 1e-3
+
+    # Geometric parameter    
+    parameter['L0'] = 1130 * 1e-6
+    parameter['r_max'] = 32 * 1e-6
+    parameter['rc'] = 'spheroid'
+    parameter['eps_phi'] = 1e-3
+    
+    # Material parameter
+    parameter['E'] = 1e5
+    parameter['G'] = parameter['E'] / (2 * (1 + 0.5))
+    parameter['eta'] = 1e-2 * parameter['E'] 
+    parameter['nu'] = 1e-2 * parameter['G']
+
+    # Finite muscle timescale        
+    parameter['fmts'] = True    
+    parameter['tau_on'] = 0.01
+    parameter['Dt_on'] = 3*parameter['tau_on']
+                
     return parameter
 
-def run_foward_undulation(parameter):
+def undulation_parameter():
 
-    pbar = tqdm.tqdm(desc = 'Test Undulation:')        
-    solver = get_solver(parameter)    
-    FU = ForwardUndulationExperiment(parameter['N'], parameter['dt'], solver = solver, quiet=True)
+    parameter = base_parameter()
+
+    # Kinematic parameter
+    parameter['A'] = 5.0
+    parameter['lam'] = 1.0
+    parameter['f'] = 2.0
     
-    FS, CS, MP, e = FU.simulate_undulation(parameter, pbar = pbar)
+    # Gradual muscle onset at head and tale
+    parameter['gmo'] = True
+    parameter['Ds_h'] = 0.01
+    parameter['s0_h'] = 3*parameter['Ds_h']    
+    parameter['Ds_t'] = 0.01
+    parameter['s0_t'] = 1 - 3*parameter['Ds_t']
+
+    return parameter
+
+#------------------------------------------------------------------------------ 
+# "Test" scripts      
+                
+def test_forward_undulation(
+        plot_control = False,
+        make_video = False, 
+        active_clip = True, 
+        plot = True):
+        
+    parameter = undulation_parameter()    
+    parameter['T'] = 2.5
+    
+    
+    worm = init_worm(parameter)
+
+    CS = UndulationExperiment.sinusoidal_traveling_wave_control_sequence(
+            worm, parameter)
+        
+    if plot_control:
+        plot_S(CS.to_numpy(), dt = parameter['dt'])
+        plt.show()
+        
+    FS, CS, _, e = simulate_experiment(worm, 
+        parameter, CS, pbar = tqdm.tqdm(desc = 'UE:'))
             
     if e is not None:
         raise e
+
+    print(f'Picard iteration converged at every time step: {np.all(FS.pic)}')
+                        
+    if make_video:        
+        WS = WormStudio(FS)        
+        output_path = Path(
+            f'../videos/undulation_A={parameter["A"]}_lam={parameter["lam"]}_f={parameter["f"]}')
+        WS.generate_clip(output_path, 
+            add_trajectory = False, 
+            add_frame_vectors = True,
+            draw_e3 = False,
+            n_arrows = 0.2)        
+    if active_clip:
+        generate_interactive_scatter_clip(FS, 500, n_arrows=25)    
+    if plot:
+        plot_undulation(FS, CS, parameter)
             
-    return FS, CS, MP
-                
-
-def test_forward_undulation():
-    
-    parameter = get_test_parameter()    
-    FS, CS, _ = run_foward_undulation(parameter)
-
-    print(f'Finished simulation, Picard iteration convergence rate is: {np.sum(FS.pic) / len(FS.pic)}')
-
-    if False:    
-        
-        CS = CS.to_numpy()
-        
-        generate_interactive_scatter_clip(FS, 500, perspective = 'xy', n_arrows = 50) # n_arrows= 65                               
-    
-        plot_controls_CS_vs_FS(CS.to_numpy(), FS, parameter['dt'])    
-    
-        k0 = CS.Omega[:, 0, :]
-        k = FS.Omega[:, 0, :]        
-        
-        plot_single_strain_vs_control(k0, k, dt = parameter['dt'], titles = [r'$\kappa_{2,0}$', r'$\kappa_{2}$'], cbar_format='%.1f', cmap = plt.get_cmap('plasma'))        
-        plot_trajectory(FS, parameter)
-        plt.show()
-
-
     return
 
+#------------------------------------------------------------------------------ 
+# Plotting
+
+def plot_undulation(FS, CS, parameter):
+    
+    plot_CS_vs_FS(CS, FS, T = parameter['T'])    
+    
+    
+    # Plot COM trajectory and velocity    
+    X = FS.x    
+    t = FS.times
+    
+    x_head = X[:, :, 0]
+    x_tale = X[:, :, -1]
+    x_mid = X[:, :, int(0.5*X.shape[2])]
+     
+    x_com, v_com, _ = EPP.comp_com(X, parameter['dt'])
+    U = EPP.comp_mean_com_velocity(X, t, 1.0/parameter['f'])
+    
+    # Plot Head/midpoint/tale trajectory    
+    gs = plt.GridSpec(2, 1)
+    ax0 = plt.subplot(gs[0])
+    ax1 = plt.subplot(gs[1])
+    
+    ax0.plot(x_com[:, 1], x_com[:, 2], ls = '-', c = 'k')
+    ax0.plot(x_mid[:, 1], x_mid[:, 2], ls = '--', c = 'b')        
+    ax0.plot(x_mid[:, 1], x_mid[:, 2], ls = '--', c = 'b')
+    
+    ax1.plot([t[0], t[-1]], [U, U], ls = '-', c = 'k')
+    ax1.plot(t, v_com, ls = '--', c = 'b')
+    
+    plt.show()
+    
+    return
+    
+    # x_tale = X[-1, :, int(0.5*X.shape[2])]
+    # x_head = X[0, :, :]
+    # t = FS.times
+    # theta, avg_theta, t_avg_theta = comp_angle_of_attack(
+    #     FS.x, t, 1/parameter['f'])    
+    #
+    # fig = plt.figure()
+    #
+    # ax.plot(t, 360 * avg_theta / (2 * np.pi), c = 'k')
+    # ax.plot([t[0], t[-1]], [t_avg_theta, t_avg_theta], ls = '--', c='k')
+    # ax.set_xlabel('$t$', fontsize = 20)
+    # ax.set_ylabel('$\theta$', fontsize = 20)
+    #
+    # plt.show()
+    
 def test_forward_work(show = False):
     
     parameter = get_test_parameter()        
     parameter['T'] = 2.5
-    parameter['dt'] = 0.001
+    parameter['dt'] = 0.01
     parameter['N_report'] = 100
     parameter['dt_report'] = 0.01    
     parameter['fdo'] = {1:1, 2:1}
     parameter['pi'] = False
     
-    parameter['eta'] = 1e-3*parameter['E'] 
-    parameter['nu'] = 1e-3*parameter['G']
+    parameter['eta'] = 1e-2*parameter['E'] 
+    parameter['nu'] = 1e-2*parameter['G']
     
     FS, CS, MP = run_foward_undulation(parameter)
                                             
@@ -258,70 +292,15 @@ def test_forward_work(show = False):
     else:    
         plt.savefig('undulation_work.png')
                                      
-    return
-          
-def test_forward_undulation_angle_of_attack(show = True):
+    return    
 
-    parameter = get_test_parameter()        
-    parameter['T'] = 1.0
-    parameter['N_report'] = 100
-    parameter['dt_report'] = 0.01
-    parameter['fdo'] = {1:1, 2:1}
-    parameter['pi'] = False
-
-    FS, CS = run_foward_undulation(parameter)
-                    
-    x = FS.x
-    t = FS.times
-    T_undu = 1.0 / parameter['f']
-                        
-    theta, avg_theta, t_avg_theta = comp_angle_of_attack(x, t, T_undu)    
-    
-    ax = plt.subplot(111)
-    
-    t_avg_theta = 360 * t_avg_theta / (2 * np.pi)
-    
-    ax.plot(t, 360 * avg_theta / (2 * np.pi), c = 'k')
-    ax.plot([t[0], t[-1]], [t_avg_theta, t_avg_theta], ls = '--', c='k')
-    ax.set_xlabel('$t$', fontsize = 20)
-    ax.set_ylabel('$\theta$', fontsize = 20)
-        
-    if show:
-        plt.show()
-        
-    plt.savefig('undulation_work.png')
-
-    return
-               
-def test_report_lower_resolution():        
-
-    parameter = get_test_parameter()    
-    
-    parameter['T'] = 0.1
-    
-    parameter['pi'] = False    
-    parameter['N'] = 500
-    parameter['dt'] = 0.001    
-    parameter['N_report'] = 100
-    parameter['dt_report'] = 0.01
-    
-    # parameter['N_report'] = 100
-    # parameter['dt_report'] = 0.01
-                
-    FS, CS = run_foward_undulation(parameter)
-
-    print(f'Finished simulation, Picard iteration convergence rate is: {np.sum(FS.pic) / len(FS.pic)}')
-
-    return
-                  
-                                  
+                                                 
 if __name__ == "__main__":
     
-    #test_forward_undulation()
-    #test_report_lower_resolution()    
+    test_forward_undulation(plot_control = False,
+        make_video = False, active_clip = False, plot = False)
     #test_forward_undulation_work(show=True)    
-    #test_forward_undulation_angle_of_attack(show = True)
-    test_forward_work(show = True)
+    #test_forward_work(show = True)
     
     print('Finished')
 

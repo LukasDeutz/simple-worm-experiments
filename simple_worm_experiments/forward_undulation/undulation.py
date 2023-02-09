@@ -1,241 +1,72 @@
-
-# Build-in imports
-import copy
-from os.path import isfile, join
-import pickle
-
 # Third party imports
 from fenics import Expression, Function
 import numpy as np
 
 # Local imports
-from simple_worm.rod.cosserat_rod_2_test import CosseratRod_2
-from simple_worm.controls.controls import ControlsFenics 
-from simple_worm.controls.control_sequence import ControlSequenceFenics
-from simple_worm_experiments.util import dimensionless_MP, default_solver, get_solver, save_output, load_data
-
-from mp_progress_logger import FWException
-
-data_path = "../../data/forward_undulation/"
-
-KINEMATIC_KEYS = ['lam', 'C_t', 'K']
+from simple_worm.controls import ControlsFenics, ControlSequenceFenics
+from simple_worm_experiments.experiment import Experiment 
         
 #===============================================================================
 # Simulate undulation
 
-class ForwardUndulationExperiment():
+class UndulationExperiment(Experiment):
+    '''
+    Implements control sequences to model simple 2d undulation gait
+    '''
     
-    def __init__(self, N, dt, solver = None, quiet = False):
-        
-        
-        if solver is None:
-            solver = default_solver()
-            
-        self.solver = solver
-        self.worm = CosseratRod_2(N, dt, self.solver, quiet = quiet)
-                            
-    def undulation_control_sequence(self, parameter):
+    @staticmethod                                            
+    def sinusoidal_traveling_wave_control_sequence(worm, parameter):
+        '''
+        Returns forward undualtion control sequence 
+
+        :param worm (CosseratRod): worm object
+        :param parameter (dict): parameter dictionary
+        '''
+                
+        # Read in parameters
         
         T = parameter['T']
-        smo, gmo_t = parameter['smo'], parameter['gmo_t']
-        A, lam, f = parameter['A'], parameter['lam'], parameter['f']        
-        
-        w = 2*np.pi*f
-        k = 2*np.pi/lam
-            
-        n = int(T/self.worm.dt)        
-        t_arr = np.linspace(0, T, n)
-        
-        sigma_expr = Expression(('0', '0', '0'), degree = 1)    
-        sigma = Function(self.worm.function_spaces['sigma'])
-        sigma.assign(sigma_expr)
-                
-        if gmo_t: # Gradual muscle on switch
-            
-            tau_on = parameter['tau_on']
-            Dt_on = parameter['Dt_on']
-
-            s_m_on = Expression('1 / ( 1 + exp(- ( t - Dt) / tau))', 
-                                 degree = 1,
-                                 t = 0,
-                                 Dt = Dt_on,
-                                 tau = tau_on)
+        # Kinematic parameter
+        A, lam, f = parameter['A'], parameter['lam'], parameter['f']                
+        w, q = 2*np.pi*f, 2*np.pi/lam
+                                    
+        # Muscles switch on and off on a finite time scale                
+        if parameter['fmts']:        
+            tau_on, Dt_on  = parameter['tau_on'], parameter['Dt_on']
+            sm_on = UndulationExperiment.sig_m_on_expr(tau_on, Dt_on)
         else:
-
-            s_m_on = Expression('1', degree = 1)
-        
-        if smo: # Smooth muscle onset
-        
-            a  = parameter['a_smo']
-            du = parameter['du_smo']
+            sm_on = Expression('1', degree = 1)
             
-            st = Expression('1 / ( 1 + exp(-a*(x[0] - du) ) )', degree = 1, a=a, du = du) # sigmoid tale 
-            sh = Expression('1 / ( 1 + exp( a*(x[0] - 1 + du) ) )', degree = 1, a=a, du = du) # sigmoid head
-        
-        else:
-            st = Expression('1', degree = 1)
+        # Gradual muscle activation onset at head and tale
+        if parameter['gmo']:                            
+            Ds_h, s0_h = parameter['Ds_h'], parameter['s0_h']
+            Ds_t, s0_t = parameter['Ds_t'], parameter['s0_t']
+            sh = UndulationExperiment.sig_head_expr(Ds_h, s0_h)
+            st = UndulationExperiment.sig_tale_expr(Ds_t, s0_t)
+        else: 
             sh = Expression('1', degree = 1)
+            st = Expression('1', degree = 1)
                                                                 
-        Omega_expr = Expression(("s_m_on*st*sh*A*sin(k*x[0] - w*t)", 
-                                 "0",
-                                 "0"), 
-                                 degree=1,
-                                 t = 0,
-                                 A = A,
-                                 k = k,
-                                 w = w,
-                                 st = st,
-                                 sh = sh,
-                                 s_m_on = s_m_on)   
-                                
+        Omega_expr = Expression(("sm_on*sh*st*A*sin(q*x[0] - w*t)", "0", "0"), 
+            degree=1, t = 0, A = A, q = q, w = w, st = st, sh = sh, sm_on = sm_on)   
+                  
+        sigma_expr = Expression(('0', '0', '0'), degree = 1)    
+        sigma = Function(worm.function_spaces['sigma'])
+        sigma.assign(sigma_expr)
+                                                  
         CS = []
             
-        for t in t_arr:
+        for t in np.linspace(0, T, int(T/worm.dt)):
             
-            s_m_on.t = t
-            
-            s_m_on_func = Function(self.worm.function_spaces['dot_w_F_lin'])
-            s_m_on_func.assign(s_m_on)
-                                                      
-            Omega_expr.t = t
-            Omega = Function(self.worm.function_spaces['Omega'])        
+            sm_on.t = t
+            Omega_expr.t = t                                                                  
+            Omega = Function(worm.function_spaces['Omega'])        
             Omega.assign(Omega_expr)
                                     
             C = ControlsFenics(Omega, sigma)
             CS.append(C)
                         
         CS = ControlSequenceFenics(CS)
-        CS.rod = self.worm
+        CS.rod = worm
             
         return CS  
-                                  
-    def initial_posture(self, MP, C):
-        
-        # Relax to initial posture     
-        T = 2.0
-        
-        n = int(T/self.worm.dt) 
-            
-        #TODO: Use rft instead of linear drag 
-        MP.external_force = 'linear_drag'
-        MP.K_t = np.identity(3)
-        
-        CS = ControlSequenceFenics(C, n_timesteps = n)
-        
-        FS = self.worm.solve(T, MP = MP.to_fenics(), CS = CS)
-          
-        return FS[-1]        
-        
-    def simulate_undulation(self, 
-                            parameter, 
-                            pbar = None,
-                            logger = None,
-                            init_posture = False):            
-
-
-        T = parameter['T']
-        dt_report = parameter['dt_report']
-        N_report = parameter['N_report']
-                                                                                                                                                       
-        MP = dimensionless_MP(parameter)
-        CS = self.undulation_control_sequence(parameter) 
-        
-        if init_posture:    
-            #TODO:
-            F0 = self.initial_posture(copy.deepcopy(MP), CS[0])
-        else:
-            F0 = None
-                    
-        FS, e = self.worm.solve(T, MP, CS, F0, pbar, logger, dt_report, N_report) 
-
-        CS = CS.to_numpy(dt_report = dt_report, N_report = N_report)
-                                  
-        return FS, CS, MP, e
-
-#------------------------------------------------------------------------------ 
-# 
-
-def wrap_simulate_undulation(_input, 
-                             pbar,
-                             logger,
-                             task_number,                             
-                             output_dir,  
-                             overwrite  = False, 
-                             save_keys = None,                              
-                             ):
-    '''
-    Saves simulations results to file
-    
-    
-    :param _input (tuple): parameter dictionary and hash
-    :param pbar (tqdm.tqdm): progressbar
-    :param logger (logging.Logger): Logger
-    :param task_number (int):
-    :param output_dir (str): result directory
-    :param overwrite (bool): If true, exisiting files are overwritten
-    :param save_keys (list): List of attributes which will saved to the result file.
-    If None, then all files get saved.
-    '''
-
-
-    parameter, _hash = _input[0], _input[1]
-    
-    filepath = join(output_dir, _hash + '.dat')
-            
-    if not overwrite:    
-        if isfile(filepath):
-            logger.info(f'Task {task_number}: File already exists')                                    
-            output = pickle.load(open(join(output_dir, _hash + '.dat'), 'rb'))
-            FS = output['FS']
-                        
-            exit_status = output['exit_status'] 
-                        
-            if exit_status:
-                raise FWException(FS.pic, parameter['T'], parameter['dt'], FS.times[-1])
-            
-            result = {}
-            result['pic'] = FS.pic
-            
-            return result
-    
-    N = parameter['N']
-    dt = parameter['dt']
-        
-    FU = ForwardUndulationExperiment(N, dt, solver = get_solver(parameter), quiet = True)
-                        
-    FS, CS, MP, e = FU.simulate_undulation(parameter, pbar, logger)
-
-    if e is not None:
-        exit_status = 1
-    else:
-        exit_status = 0
-                
-    # Regardless if simulation has finished or failed, simulation results
-    # up to this point are saved to file         
-    save_output(filepath, FS, CS, MP, parameter, exit_status, save_keys)                        
-    logger.info(f'Task {task_number}: Saved file to {filepath}.')         
-                
-    # If the simulation has failed then we reraise the exception
-    # which has been passed upstream        
-    if e is not None:                
-        raise FWException(FS.pic, 
-                          parameter['T'], 
-                          parameter['dt'], 
-                          FS.times[-1]) from e
-        
-    # If simulation has finished succesfully then we return the relevant results 
-    # for the logger
-    result = {}    
-    result['pic'] = FS.pic
-    
-    return result
-    
-                
-
-    
-
-
-    
-    
-    
-

@@ -8,13 +8,82 @@ import numpy as np
 class EPP(object):
     '''
     Class to post process and analyse simulation results.
+    
+    n = number of time points
+    N = number of bodypoints        
     '''
 
-    def __init__(self):
+    @staticmethod
+    def comp_com(x, dt):
+        '''Compute mean centreline coordinates and its velocity as a function of time
+                
+        :param x (np.ndarray (n x 3 x N)): centreline coordinates
+        :param dt (float): timestep                
         '''
-        Constructor
+            
+        x_com = np.mean(x, axis = 2)
+            
+        v_com_vec = np.gradient(x_com, dt, axis=0, edge_order=1)    
+        v_com = np.sqrt(np.sum(v_com_vec**2, axis = 1))
+    
+        return x_com, v_com, v_com_vec 
+        
+    @staticmethod
+    def comp_mean_com_velocity(x, t, Delta_T = 0.0):
         '''
-        pass
+        Computes mean swimming speed
+        
+        :param x (np.ndarray (n x 3 x N)): centreline coordinates
+        :param t: (np.ndarray (n x 1)): timestamps
+        :param Delta_T (float): crop timepoints t < Delta_T
+        '''    
+        dt = t[1] - t[0] 
+    
+        _, v_com, _ = EPP.comp_com(x, dt)
+                    
+        v = v_com[t >= Delta_T]
+        
+        U = np.mean(v)
+        
+        return U 
+    
+    @staticmethod
+    def comp_angle_of_attack(x, time, Delta_t = 0):
+        '''
+        Compute angle of attack
+        
+        :param x (np.array (n x 3 x N)): centreline coordinates
+        :param t (np.array (n x 1)): timestamps
+        :param Delta_t (float): crop timepoints t < Delta_T
+        '''        
+        dt = time[1] - time[0]
+        
+        _, _, v_com_vec = EPP.compute_com(x, dt)
+        
+        # Average com velocity 
+        v_com_avg = np.mean(v_com_vec, axis = 0)
+        # Propulsion direction
+        e_p = v_com_avg / np.linalg.norm(v_com_avg)
+    
+        # Compute tangent   
+        # Negative sign makes tangent point from tale to head 
+        t = - np.diff(x, axis = 2)
+        # Normalize
+        abs_tan = np.linalg.norm(t, axis = 1)    
+        t = t / abs_tan[:, None, :]
+        
+        # Turning angle
+        # Arccos of scalar product between local tangent and propulsion direction
+        dot_t_x_e_p = np.arccos(np.sum(t * e_p[None, :, None], axis = 1))
+        
+        theta = (dot_t_x_e_p)  
+        # Think about absolute value here      
+        avg_theta = np.mean(np.abs(theta), axis = 1)
+            
+        # Time average
+        t_avg_theta = np.mean(avg_theta[time >= Delta_t])
+            
+        return theta, avg_theta, t_avg_theta    
     
     @staticmethod
     def centreline_pca(X):
@@ -82,19 +151,7 @@ class EPP(object):
 
         if not output_w: return x, y
         else: return x, y, w2, w3
-                       
-    @staticmethod           
-    def compute_com(x, dt):
-        '''Compute the center of mass and its velocity as a function of time'''
-            
-        x_com = np.mean(x, axis = 2)
-            
-        v_com_vec = np.gradient(x_com, dt, axis=0, edge_order=1)    
-        v_com = np.sqrt(np.sum(v_com_vec**2, axis = 1))
-    
-        return x_com, v_com, v_com_vec 
-       
-        
+                               
     @staticmethod
     def comp_dv_plane(d2, s_mask = None):
         '''
