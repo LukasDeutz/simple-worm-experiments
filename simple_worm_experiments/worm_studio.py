@@ -288,7 +288,8 @@ class WormStudio():
     @staticmethod
     def wrap_generate_clip(input_tup):
         '''
-        Wrapes simulate_experiment function to make it compatible with parameter_scan module. 
+        Wrapes generate clip function so that it can be used with 
+        the multiprocessing package. 
             
         :param _input (tuple): Parameter dictionary and hash
         :param create_CS (function): Creates control sequence from parameter
@@ -339,9 +340,42 @@ class WormStudio():
                 
         pool = mp.Pool(N_worker, WormStudio._init_worker, initargs = (data_dir, output_dir, overwrite, kwargs))
         
-        for output in pool.imap(WormStudio.wrap_generate_clip, zip(FS_names, video_names)):
-            pass
+        pool.map(WormStudio.wrap_generate_clip, zip(FS_names, video_names))
         
-        pass
+        return
     
+    
+#------------------------------------------------------------------------------ 
+# Static method to generate clips for every parameter grid
+    
+    @staticmethod    
+    def generate_worm_clips_from_PG(
+            PG,
+            filenames, 
+            output_dir,
+            data_dir,
+            **kwargs):
+        '''
+        Generates a clip for every FrameSequence in parameter grid
+                
+        :param PG (ParameterGrid): Parameter gird object
+        :param filenames (List[str]): video filenames
+        :param output_dir (PoxisPath): output directory
+        :param data_dir (PoxisPath): data directory with simulation files
+        :param kwargs (dict): Additional keyword arguments passed to 
+            WormStudio.generate_clip
+        '''
+                                                           
+        if not output_dir.exists(): 
+            output_dir.mkdir()
+         
+        for h, fn in zip(PG.hash_arr, filenames):
+            
+            FS_name = h + '.dat'              
+            sim_data = pickle.load(open(str(data_dir / FS_name), 'rb'))                    
+
+            WS = WormStudio(sim_data['FS'])                                    
+            WS.generate_clip(output_dir / fn, **kwargs)
+                             
+        return    
 
