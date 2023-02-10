@@ -305,7 +305,7 @@ class EPP(object):
             alpha = alpha[idx]
             t = t[idx]
         if s_mask is not None:
-            alpha = alpha[:, :, s_mask]
+            alpha = alpha[:, s_mask]
                                         
         # map alpha to range -pi to pi
         avg_alpha = alpha.mean(axis = 1)
