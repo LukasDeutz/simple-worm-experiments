@@ -284,7 +284,7 @@ class EPP(object):
         return f_avg, f_std, phi
         
     @staticmethod
-    def comp_roll_frequency_from_euler_angle(alpha, t, Dt = None):
+    def comp_roll_frequency_from_euler_angle(alpha, t, s_mask = None, Dt = None):
         '''
         Compute roll frequency from continuous roll experiment
         
@@ -304,7 +304,9 @@ class EPP(object):
             idx = t >= Dt
             alpha = alpha[idx]
             t = t[idx]
-        
+        if s_mask is not None:
+            alpha = alpha[:, :, s_mask]
+                                        
         # map alpha to range -pi to pi
         avg_alpha = alpha.mean(axis = 1)
         avg_alpha = avg_alpha % (2*np.pi) - np.pi        
