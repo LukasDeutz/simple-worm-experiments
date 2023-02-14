@@ -43,7 +43,7 @@ def default_model_parameter():
     parameter['nu'] = 1e-2 * parameter['G']
 
     # Muscle parameter            
-    parameter['mts'] = True
+    parameter['fmts'] = True
     parameter['tau_on'] = 0.05
     parameter['Dt_on'] = 3*parameter['tau_on']
         
