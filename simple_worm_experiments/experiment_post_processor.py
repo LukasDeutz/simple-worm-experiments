@@ -4,6 +4,7 @@ Created on 10 Jan 2023
 @author: lukas
 '''
 import numpy as np
+from scipy.integrate import trapezoid, cumulative_trapezoid
 
 class EPP(object):
     '''
@@ -12,7 +13,28 @@ class EPP(object):
     n = number of time points
     N = number of bodypoints        
     '''
-
+    
+    #TODO: Powers should be consistently named throughout the project
+    rename_powers = {
+        'V_dot_k': 'dot_V_k',
+        'V_dot_sig': 'dot_V_sig',        
+        'D_k': 'dot_D_k',
+        'D_sig': 'dot_D_sig',
+        'dot_W_F_lin': 'dot_W_F_F',
+        'dot_W_F_rot': 'dot_W_F_T',
+        'dot_W_M_lin': 'dot_W_M_F',
+        'dot_W_M_rot': 'dot_W_M_T'}
+        
+    energy_names_from_powers = {
+        'dot_V_k': 'V_k',
+        'dot_V_sig': 'V_sig',
+        'dot_D_k': 'D_k',
+        'dot_D_sig': 'D_sig',
+        'dot_W_F_F': 'W_F_F',
+        'dot_W_F_T': 'W_F_T',
+        'dot_W_M_F': 'W_M_F',
+        'dot_W_M_T': 'W_M_T'}
+    
     @staticmethod
     def comp_com(x, dt):
         '''Compute mean centreline coordinates and its velocity as a function of time
@@ -314,3 +336,63 @@ class EPP(object):
         f_avg, f_std = EPP.comp_roll_frequency(avg_alpha, t)
                                                           
         return f_avg, f_std
+                 
+    @staticmethod                 
+    def powers_from_FS(FS):
+        '''
+        Returns dicitionary with powers from frame sequence
+        
+        :param FS (FrameSequenceNumpy): frame sequence
+        '''            
+        powers = {}
+                
+        for k, new_k in EPP.rename_powers.items():
+            
+            powers[new_k] = getattr(FS, k)
+        
+        return powers
+            
+                                                                
+    @staticmethod
+    def comp_energy_from_power(powers, dt):
+        '''
+        Computes energy which stored as elastic potential energy, dissipated internally or
+        into the fluid and mechanical muscle work done from given powers as function of time
+        
+        :param powers (dict): power dictionary 
+        :param dt (float): timestep
+        '''
+             
+        energies = {}
+                          
+        for key, power in powers.items():
+            
+            name = EPP.energy_names_from_powers[key]
+            energies[name] = cumulative_trapezoid(power, dx=dt, initial=0)       
+       
+        return energies
+       
+    @staticmethod
+    def comp_tot_energy_from_power(powers, dt):
+        '''
+        Computes total energy stored as elastic potential, dissipated internally or
+        into the fluid and mechanical muscle work done from given powers as function of time
+        
+        :param powers (dict): power dictionary 
+        :param dt (float): timestep
+        '''        
+        energies = {}
+                          
+        for key, power in powers.items():
+            
+            name = EPP.energy_names_from_powers[key]
+            energies[name] = cumulative_trapezoid(power, dx=dt, initial=0)       
+       
+        return energies
+        
+        
+        
+        
+        
+        
+        

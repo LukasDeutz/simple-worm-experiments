@@ -62,6 +62,42 @@ class Experiment():
             Ds = Ds, 
             s0 = s0) 
 
+    @staticmethod        
+    def spatial_gmo(parameter):        
+        # Gradual onset of muscle activation at head and tale
+        if parameter['gmo']:                            
+            Ds_h, s0_h = parameter['Ds_h'], parameter['s0_h']
+            Ds_t, s0_t = parameter['Ds_t'], parameter['s0_t']
+            sh = Experiment.sig_head_expr(Ds_h, s0_h)
+            st = Experiment.sig_tale_expr(Ds_t, s0_t)
+        else: 
+            sh = Expression('1', degree = 1)
+            st = Expression('1', degree = 1)
+        
+        return sh, st
+    
+    @staticmethod
+    def muscle_on_switch(parameter):        
+        # Muscle switch on at finite timescale
+        if parameter['fmts']:        
+            t_on, tau_on  = parameter['t_on'], parameter['tau_on']
+            sm_on = Experiment.sig_m_on_expr(t_on, tau_on)
+        else:
+            sm_on = Expression('1', degree = 1)
+        
+        return sm_on
+
+    @staticmethod
+    def muscle_off_switch(parameter):
+
+        if parameter['fmts']:        
+            t_off, tau_off  = parameter['t_off'], parameter['tau_off']
+            sm_off = Experiment.sig_m_off_expr(t_off, tau_off)
+        else:
+            sm_off = Expression('1', degree = 1)
+        
+        return sm_off
+      
       
       
 def init_worm(parameter):
