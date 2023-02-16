@@ -351,8 +351,33 @@ class EPP(object):
             powers[new_k] = getattr(FS, k)
         
         return powers
+
+    @staticmethod
+    def powers_from_h5(h5, t_start = None, t_end = None):
+        '''
+        Returns dicitionary with powers from frame hdf5 file
+        
+        :param h5 (h5py.File): hdf5 file
+        '''                                    
+        powers = {}
+
+        if t_start is not None or t_end is not None:        
+            t = h5['t'][:]
+            idx_arr = np.zeros(t.size, dtype = bool)                
+            if t_start is not None:
+                idx_arr = np.logical_and(idx_arr, t >= t_start) 
+            if t_end is not None:
+                idx_arr = np.logical_and(idx_arr, t <= t_end) 
+                                        
+        for k, new_k in EPP.rename_powers.items():
             
-                                                                
+            if t_start is not None or t_end is not None:
+                powers[new_k] = h5['FS'][k][:][:, idx_arr]
+            else:
+                powers[new_k] = h5['FS'][k][:]
+        
+        return powers
+                                                                            
     @staticmethod
     def comp_energy_from_power(powers, dt):
         '''
