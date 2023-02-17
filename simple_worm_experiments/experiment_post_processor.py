@@ -367,16 +367,20 @@ class EPP(object):
             if t_start is not None:
                 idx_arr = np.logical_and(idx_arr, t >= t_start) 
             if t_end is not None:
-                idx_arr = np.logical_and(idx_arr, t <= t_end) 
-                                        
+                idx_arr = np.logical_and(idx_arr, t <= t_end)             
+            t = t[idx_arr]
+                
         for k, new_k in EPP.rename_powers.items():
             
             if t_start is not None or t_end is not None:
                 powers[new_k] = h5['FS'][k][:][:, idx_arr]
             else:
                 powers[new_k] = h5['FS'][k][:]
-        
-        return powers
+
+        if t_start is not None or t_end is not None:
+            return powers, t
+        else:
+            return powers
                                                                             
     @staticmethod
     def comp_energy_from_power(powers, dt):
