@@ -363,7 +363,7 @@ class EPP(object):
 
         if t_start is not None or t_end is not None:        
             t = h5['t'][:]
-            idx_arr = np.zeros(t.size, dtype = bool)                
+            idx_arr = np.ones(t.size, dtype = bool)                
             if t_start is not None:
                 idx_arr = np.logical_and(idx_arr, t >= t_start) 
             if t_end is not None:
