@@ -381,7 +381,48 @@ class EPP(object):
             return powers, t
         else:
             return powers
-                                                                            
+    
+    @staticmethod
+    def comp_true_powers(powers):
+        '''
+        Compute "true" output powers 
+        
+        :param powers (dict): power dictionary         
+        '''
+        dot_V = powers['dot_V_k'] + powers['dot_V_sig']
+        dot_D = powers['dot_D_k'] + powers['dot_D_sig']                
+        dot_W_F = powers['dot_W_F_F'] + powers['dot_W_F_T']
+        
+        # Increasing the potential energy costs energy
+        # and is therefore counted negative
+        dot_V = - dot_V
+        # Compute "true" dissipation rate        
+        dot_E = dot_D + dot_W_F + dot_V
+        # If the decrease in potential energy per unit time 
+        # is larger than the total dissipation rate then we 
+        # set the true disspation to zero 
+        idx_arr = dot_E >= 0        
+        dot_D[idx_arr] = 0
+        dot_W_F[idx_arr] = 0
+        dot_V[idx_arr] = -dot_E[idx_arr]
+                        
+        # If the decrease in potential energy per unit time 
+        # is smaller than the total dissipation rate then we 
+        # add the released potential energy equally
+        # to the internal and fluid dissipation rate
+        idx_arr = np.logical_and(dot_V > 0, dot_E < 0)        
+        dot_D[idx_arr] += 0.5*dot_V[idx_arr]
+        dot_W_F[idx_arr] += 0.5*dot_V[idx_arr]        
+        dot_V[idx_arr] = 0        
+        idx_arr = dot_D > 0                                                                
+        dot_W_F[idx_arr] += dot_D[idx_arr]        
+        dot_D[idx_arr] = 0        
+        idx_arr = dot_W_F > 0
+        dot_D[idx_arr] += dot_W_F[idx_arr]
+        dot_W_F[idx_arr] = 0
+                                                                                                                  
+        return dot_V, dot_D, dot_W_F
+                                                                                                            
     @staticmethod
     def comp_energy_from_power(powers, dt):
         '''
