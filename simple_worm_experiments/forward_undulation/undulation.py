@@ -27,8 +27,14 @@ class UndulationExperiment(Experiment):
         
         T = parameter['T']
         # Kinematic parameter
-        A, lam, f = parameter['A'], parameter['lam'], parameter['f']                
+        lam, f = parameter['lam'], parameter['f']                
         w, q = 2*np.pi*f, 2*np.pi/lam
+        
+        if parameter['A'] is not None:
+            A = parameter['A']            
+        else:
+            c = parameter['c']
+            A = c*q
                                     
         # Muscles switch on and off on a finite time scale                
         if parameter['fmts']:        
