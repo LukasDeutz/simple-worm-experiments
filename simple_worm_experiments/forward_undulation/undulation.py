@@ -38,8 +38,8 @@ class UndulationExperiment(Experiment):
                                     
         # Muscles switch on and off on a finite time scale                
         if parameter['fmts']:        
-            tau_on, Dt_on  = parameter['tau_on'], parameter['Dt_on']
-            sm_on = UndulationExperiment.sig_m_on_expr(tau_on, Dt_on)
+            tau_on, t0_on  = parameter['tau_on'], parameter['t0_on']
+            sm_on = UndulationExperiment.sig_m_on_expr(t0_on, tau_on)
         else:
             sm_on = Expression('1', degree = 1)
             
