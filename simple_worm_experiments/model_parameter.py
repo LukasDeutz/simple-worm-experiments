@@ -30,7 +30,7 @@ def default_model_parameter(as_dict = True):
         help = 'Maximum number of Picard iterations')
     param.add_argument('--fdo', nargs = 2, type = int, default = [2, 2], 
         help = 'Order of finite difference approximations')
-    param.add_argument('use_inertia', type = bool, default = False, 
+    param.add_argument('--use_inertia', type = bool, default = False, 
         help = 'If true, interia terms are included into the equations of motion')
               
     # Fluid parameter
