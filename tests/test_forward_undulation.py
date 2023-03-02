@@ -109,6 +109,8 @@ def test_forward_undulation(argv,
 def plot_undulation(FS, CS, parameter, show):
     
     plot_CS_vs_FS(CS, FS, T = parameter['T'])    
+    plt.savefig(fig_path / 'CS_vs_FS.png')    
+    if not show: plt.close()
         
     # Plot COM trajectory and velocity    
     X = FS.x    
