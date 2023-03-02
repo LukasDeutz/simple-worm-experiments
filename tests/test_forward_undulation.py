@@ -1,3 +1,7 @@
+# Built-in
+from sys import argv
+from pathlib import Path
+
 # Third party imports
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -12,84 +16,57 @@ from simple_worm.plot3d_cosserat import plot_CS_vs_FS, plot_S
 from simple_worm_experiments.experiment import simulate_experiment, init_worm
 from simple_worm_experiments.forward_undulation.undulation import UndulationExperiment
 from simple_worm_experiments.experiment_post_processor import EPP
-from simple_worm_experiments.worm_studio import WormStudio
+from simple_worm_experiments.model_parameter import default_model_parameter
+from argparse import ArgumentParser
+#from simple_worm_experiments.worm_studio import WormStudio
+
+fig_path = Path('./figures/undulation')
+video_path = Path('./videos')
+if not fig_path.exists(): fig_path.mkdir(parents = True)
+if not video_path.exists(): video_path.mkdir(parents = True)
 
 #------------------------------------------------------------------------------ 
 # Parameter
 
-def base_parameter():
-                    
-    parameter = {}
-          
-    # Simulation parameter                      
-    parameter['N']  = 100
-    parameter['dt'] = 0.01
-    parameter['T'] = 2.5
-    parameter['N_report'] = None
-    parameter['dt_report'] = None
-
-    # Solver parameter        
-    parameter['pi_alpha0'] = 0.9            
-    parameter['pi_maxiter'] = 1000             
-    parameter['fdo'] = {1: 2, 2:2}
-
-    # Model parameter    
-    parameter['use_inertia'] = False
-
-    # Fluid parameter
-    parameter['external_force'] = ['rft']
-    parameter['rft'] = 'Whang'
-    parameter['mu'] = 1e-3
-
-    # Geometric parameter    
-    parameter['L0'] = 1130 * 1e-6
-    parameter['r_max'] = 32 * 1e-6
-    parameter['rc'] = 'spheroid'
-    parameter['eps_phi'] = 1e-3
-    
-    # Material parameter
-    parameter['E'] = 1e5
-    parameter['G'] = parameter['E'] / (2 * (1 + 0.5))
-    parameter['eta'] = 1e-2 * parameter['E'] 
-    parameter['nu'] = 1e-2 * parameter['G']
-
-    # Finite muscle timescale        
-    parameter['fmts'] = True    
-    parameter['tau_on'] = 0.01
-    parameter['Dt_on'] = 3*parameter['tau_on']
-                
-    return parameter
-
 def undulation_parameter():
-
-    parameter = base_parameter()
-
-    # Kinematic parameter
-    parameter['A'] = 5.0
-    parameter['lam'] = 1.0
-    parameter['f'] = 2.0
+        
+    model_parser = default_model_parameter(as_dict=False)
     
-    # Gradual muscle onset at head and tale
-    parameter['gmo'] = True
-    parameter['Ds_h'] = 0.01
-    parameter['s0_h'] = 3*parameter['Ds_h']    
-    parameter['Ds_t'] = 0.01
-    parameter['s0_t'] = 1 - 3*parameter['Ds_t']
-
-    return parameter
+    model_parser.add_argument('--T', type=float, default=2.5,
+        help='Simulation time')
+    
+    # Muscle timescale
+    model_parser.add_argument('--fmts', type=bool, default=True,
+        help='If true, muscles switch on on a finite time scale')
+    model_parser.add_argument('--tau_on', type=float, default = 0.1,
+        help='Muscle time scale')
+    model_parser.add_argument('--t0_on', type=float, default = 5*0.1,
+        help='Sigmoid midpoint')
+        
+    # Kinematic parameter    
+    model_parser.add_argument('--f', type=float, default=2.0,
+        help='Undulation frequency')
+    model_parser.add_argument('--A', type=float, default=4.0,
+        help='Undulation amplitude')
+    model_parser.add_argument('--c', type=float, default=1.0,
+        help='Amplitude wavenumber ratio')    
+    model_parser.add_argument('--lam', type=float, default=1.0,
+        help='Undulation wavelength')
+    
+    return model_parser
 
 #------------------------------------------------------------------------------ 
 # "Test" scripts      
                 
-def test_forward_undulation(
+def test_forward_undulation(argv,
         plot_control = False,
         make_video = False, 
-        active_clip = True, 
-        plot = True):
+        gen_clip = True, 
+        plot_figs =True,
+        show = False):
         
-    parameter = undulation_parameter()    
-    parameter['T'] = 2.5
-    
+    model_parser = undulation_parameter()
+    parameter = vars(model_parser.parse_known_args(argv)[0])
     
     worm = init_worm(parameter)
 
@@ -97,8 +74,9 @@ def test_forward_undulation(
             worm, parameter)
         
     if plot_control:
-        plot_S(CS.to_numpy(), dt = parameter['dt'])
-        plt.show()
+        plot_S(CS.to_numpy(), dt = parameter['dt_report'])                
+        if show: plt.show()
+        plt.savefig(fig_path / 'CS.png')
         
     FS, CS, _, e = simulate_experiment(worm, 
         parameter, CS, pbar = tqdm.tqdm(desc = 'UE:'))
@@ -117,21 +95,20 @@ def test_forward_undulation(
             add_frame_vectors = True,
             draw_e3 = False,
             n_arrows = 0.2)        
-    if active_clip:
+    if gen_clip:
         generate_interactive_scatter_clip(FS, 500, n_arrows=25)    
-    if plot:
-        plot_undulation(FS, CS, parameter)
+    if plot_figs:
+        plot_undulation(FS, CS, parameter, show)
             
     return
 
 #------------------------------------------------------------------------------ 
 # Plotting
 
-def plot_undulation(FS, CS, parameter):
+def plot_undulation(FS, CS, parameter, show):
     
     plot_CS_vs_FS(CS, FS, T = parameter['T'])    
-    
-    
+        
     # Plot COM trajectory and velocity    
     X = FS.x    
     t = FS.times
@@ -155,7 +132,9 @@ def plot_undulation(FS, CS, parameter):
     ax1.plot([t[0], t[-1]], [U, U], ls = '-', c = 'k')
     ax1.plot(t, v_com, ls = '--', c = 'b')
     
-    plt.show()
+    if show: plt.show()
+    
+    plt.savefig(fig_path / 'point_trajectory_and_speed.png')
     
     return
     
@@ -297,10 +276,20 @@ def test_forward_work(show = False):
                                                  
 if __name__ == "__main__":
     
-    test_forward_undulation(plot_control = False,
-        make_video = False, active_clip = False, plot = False)
-    #test_forward_undulation_work(show=True)    
-    #test_forward_work(show = True)
+    plot_parser = ArgumentParser()
+    plot_parser.add_argument('--plot_control', type=bool, default=True)
+    plot_parser.add_argument('--make_video', type=bool, default=False)
+    plot_parser.add_argument('--gen_clip', type=bool, default=False)
+    plot_parser.add_argument('--plot_figs', type=bool, default=True)
+    plot_parser.add_argument('--show', type=bool, default=False)
+            
+    plot_args = plot_parser.parse_known_args(argv)[0]            
+                        
+    test_forward_undulation(argv,
+        plot_control = plot_args.plot_control,
+        make_video = plot_args.make_video, 
+        gen_clip = plot_args.gen_clip, 
+        plot_figs = plot_args.plot_figs)
     
     print('Finished')
 
