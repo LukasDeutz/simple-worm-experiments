@@ -77,6 +77,7 @@ def test_forward_undulation(argv,
         plot_S(CS.to_numpy(), dt = parameter['dt_report'])                
         if show: plt.show()
         plt.savefig(fig_path / 'CS.png')
+        plt.close()
         
     FS, CS, _, e = simulate_experiment(worm, 
         parameter, CS, pbar = tqdm.tqdm(desc = 'UE:'))
@@ -135,6 +136,7 @@ def plot_undulation(FS, CS, parameter, show):
     if show: plt.show()
     
     plt.savefig(fig_path / 'point_trajectory_and_speed.png')
+    plt.close()
     
     return
     
