@@ -61,7 +61,7 @@ def undulation_parameter():
 def test_forward_undulation(argv,
         plot_control = False,
         make_video = False, 
-        gen_clip = True, 
+        gen_clip = False, 
         plot_figs =True,
         show = False):
         
@@ -293,7 +293,8 @@ if __name__ == "__main__":
         plot_control = plot_args.plot_control,
         make_video = plot_args.make_video, 
         gen_clip = plot_args.gen_clip, 
-        plot_figs = plot_args.plot_figs)
+        plot_figs = plot_args.plot_figs,
+        show = plot_args.show)
     
     print('Finished')
 
