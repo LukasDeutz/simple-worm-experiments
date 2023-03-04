@@ -5,7 +5,7 @@ Created on 10 Feb 2023
 
 Default model parameter  
 '''
-from argparse import ArgumentParser
+from argparse import ArgumentParser, BooleanOptionalAction
     
 def default_model_parameter(as_dict = True):
     
@@ -22,7 +22,7 @@ def default_model_parameter(as_dict = True):
         help = 'Simulation results get saved every dt_report time step')
 
     # Solver parameter
-    param.add_argument('--pi', type = bool, default = False, 
+    param.add_argument('--pi', action = BooleanOptionalAction, default = False, 
         help = 'If true, solver does a Picard iteration at every time step')
     param.add_argument('--pi_alpha0', type = float, default = 0.9, 
         help = 'Learning rate, employed by the Picard iteration')
@@ -30,7 +30,7 @@ def default_model_parameter(as_dict = True):
         help = 'Maximum number of Picard iterations')
     param.add_argument('--fdo', nargs = 2, type = int, default = [2, 2], 
         help = 'Order of finite difference approximations')
-    param.add_argument('--use_inertia', type = bool, default = False, 
+    param.add_argument('--use_inertia', action = BooleanOptionalAction, default = False, 
         help = 'If true, interia terms are included into the equations of motion')
               
     # Fluid parameter
@@ -64,7 +64,7 @@ def default_model_parameter(as_dict = True):
         help = 'Shear viscosity')
 
     # Muscle parameter 
-    param.add_argument('--gmo', type = bool, default = True,
+    param.add_argument('--gmo', action = BooleanOptionalAction, default = True,
         help = 'If true, muscles have a gradual onset at the head and tale')
     param.add_argument('--Ds_h', type = bool, default = 0.01,
         help = 'Sigmoid slope at the head')
