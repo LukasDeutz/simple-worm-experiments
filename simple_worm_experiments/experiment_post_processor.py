@@ -5,6 +5,7 @@ Created on 10 Jan 2023
 '''
 import numpy as np
 from scipy.integrate import trapezoid, cumulative_trapezoid
+from torch.jit import isinstance
 
 class EPP(object):
     '''
@@ -18,20 +19,20 @@ class EPP(object):
     rename_powers = {
         'V_dot_k': 'dot_V_k',
         'V_dot_sig': 'dot_V_sig',        
-        'D_k': 'dot_D_k',
-        'D_sig': 'dot_D_sig',
-        'dot_W_F_lin': 'dot_W_F_F',
-        'dot_W_F_rot': 'dot_W_F_T',
+        'D_k': 'dot_D_I_k',
+        'D_sig': 'dot_D_I_sig',
+        'dot_W_F_lin': 'dot_D_F_F',
+        'dot_W_F_rot': 'dot_D_F_T',
         'dot_W_M_lin': 'dot_W_M_F',
         'dot_W_M_rot': 'dot_W_M_T'}
         
     energy_names_from_powers = {
         'dot_V_k': 'V_k',
         'dot_V_sig': 'V_sig',
-        'dot_D_k': 'D_k',
-        'dot_D_sig': 'D_sig',
-        'dot_W_F_F': 'W_F_F',
-        'dot_W_F_T': 'W_F_T',
+        'dot_D_I_k': 'D_I_k',
+        'dot_D_I_sig': 'D_I_sig',
+        'dot_D_F_F': 'D_F_F',
+        'dot_D_F_T': 'D_F_T',
         'dot_W_M_F': 'W_M_F',
         'dot_W_M_T': 'W_M_T'}
     
@@ -351,16 +352,19 @@ class EPP(object):
             powers[new_k] = getattr(FS, k)
         
         return powers
-
+    
     @staticmethod
-    def powers_from_h5(h5, t_start = None, t_end = None):
+    def powers_from_h5(h5, 
+            t_start = None, 
+            t_end = None,
+            T = None):
         '''
         Returns dicitionary with powers from frame hdf5 file
         
         :param h5 (h5py.File): hdf5 file
         '''                                    
         powers = {}
-
+            
         if t_start is not None or t_end is not None:        
             t = h5['t'][:]
             idx_arr = np.ones(t.size, dtype = bool)                
@@ -372,16 +376,51 @@ class EPP(object):
                 
         for k, new_k in EPP.rename_powers.items():
             
-            if t_start is not None or t_end is not None:
-                powers[new_k] = h5['FS'][k][:][:, idx_arr]
+            if T is not None:
+                key_grp = h5['FS'][k][f'{T}']
             else:
-                powers[new_k] = h5['FS'][k][:]
+                key_grp = h5['FS'][k]
+            
+            if t_start is not None or t_end is not None:
+                powers[new_k] = key_grp[:][:, idx_arr]
+            else:
+                powers[new_k] = key_grp[k][:]
 
         if t_start is not None or t_end is not None:
             return powers, t
         else:
             return powers
+        
+    def comp_abs_powers(powers):
     
+        dot_V = powers['dot_V_k'] + powers['dot_V_k']
+        dot_D_I = powers['dot_D_I_k'] + powers['dot_D_I_k']
+        dot_D_F = powers['dot_D_F_F'] + powers['dot_D_F_T']
+        dot_W = powers['dot_W_F'] + powers['dot_W_T'] 
+        
+        # net dissipation rate
+        dot_D = dot_D_I + dot_D_F
+        # net power
+        dot_E = dot_D - dot_V  
+        # output /input power 
+        dot_C_from_E = np.abs(dot_E)
+        dot_C_from_W = np.abs(dot_W)
+        # decompose output power in V and D contribution
+        dot_C_V = np.zeros_like(E)        
+        dot_C_D = np.zeros_like(E)        
+              
+        idx_arr = E <= 0
+        
+        dot_C_V[idx_arr] = +dot_V[idx_arr]
+        dot_C_D[idx_arr] = dot_D[idx_arr]
+        
+        idx_arr = E > 0
+        
+        dot_C_V[idx_arr] = -dot_V[idx_arr]
+        dot_C_D[idx_arr] = +dot_D[idx_arr]
+        
+        return dot_C_from_E, dot_C_from_W, dot_C_V, dot_C_D
+            
     @staticmethod
     def comp_true_powers(powers):
         '''
