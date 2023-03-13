@@ -206,15 +206,17 @@ class GridLoader():
         has_T, dim = self.PG.has_key('T', True)
 
         if not has_T:
-            self.save_data_pool(filepath,
+            h5 = self.save_data_pool(filepath,
                 FS_keys, CS_keys, overwrite, h5)
         else:
             if dim == 0 and not self.PG.line:
-                self.save_data_pool_T(filepath, 
+                h5 = self.save_data_pool_T(filepath, 
                     FS_keys, CS_keys, overwrite, h5)
             else:
-                self.save_data_no_pool(filepath, 
+                h5 = self.save_data_no_pool(filepath, 
                     FS_keys, CS_keys, overwrite, h5)
+        
+        return h5
                              
     def save_data_pool(self, 
             filepath, 
@@ -387,7 +389,7 @@ class GridLoader():
         exit_status_arr = output['exit_status']
         h5.create_dataset('exit_status', data = exit_status_arr) 
 
-        T_arr = PG.v_from_key('T')
+        T_arr = self.PG.v_from_key('T')
         h5.create_dataset('T', data = T_arr)
         
         t_list = []
@@ -408,10 +410,10 @@ class GridLoader():
                 for i, T in enumerate(T_arr):                                                        
                     sub_arr_list = []                    
                     
-                    for idx in flat_index(PG[i, :]):
+                    for idx in self.PG.flat_index(self.PG[i, :]):
                         sub_arr_list.append(arr_list[idx])                                                            
                     
-                    FS_key_grp.create_dataset(f'{T}', data = np.array(sub_arr_list))
+                    key_grp.create_dataset(f'{T}', data = np.array(sub_arr_list))
                     # Time stamps are identical for results associated with 
                     # the same simulation time T, i.e. we only need to save them 
                     # once for each iteration of the outer for loop
