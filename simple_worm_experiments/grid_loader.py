@@ -227,10 +227,10 @@ class GridLoader():
         '''
         Pools and saves specified simulation results into single HDF5 file.
         The simulation time is assumed to be identical for all simulations, 
-        i.e. results for each key can be pooled into single dataset.
+        i.e. results for each key can be pooled into a single dataset.
         '''
-        assert not self.PG.has_key('T'), ('ParameterGrid has T as a key, simulations times ' 
-            'must be identical for all simulations')
+        assert not self.PG.has_key('T'), ('ParameterGrid sweeps over T, but simulations times ' 
+            'are expected to be identical for all simulations')
         
         if isfile(filepath):
             if not overwrite:
@@ -273,7 +273,7 @@ class GridLoader():
  
         h5.create_dataset('t', data = output['t'])
         
-        return
+        return h5
     
     def save_data_no_pool(self,
         filepath, 
