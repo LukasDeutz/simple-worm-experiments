@@ -107,7 +107,7 @@ class EPP(object):
         return U 
     
     @staticmethod
-    def comp_projected_mean_swimming_speed(x, t, Delta_T):
+    def comp_mean_swimming_speed(x, t, Delta_T):
         '''
         Computes average swimming speed projected onto the first principle axis
         of centre of mass movement. This gives more accurate approximation of the 
