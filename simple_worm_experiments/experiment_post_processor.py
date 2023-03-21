@@ -458,9 +458,6 @@ class EPP(object):
         powers = {}
             
         if t_start is not None or t_end is not None:        
-            if T is not None:
-                t = h5['t'][f'{T}'][:]
-            else:
 
             if T is not None:
                 t = h5['t'][f'{T}'][:]            
