@@ -36,8 +36,44 @@ class EPP(object):
         'dot_W_M_F': 'W_M_F',
         'dot_W_M_T': 'W_M_T'}
     
+    
+
     @staticmethod
     def comp_com(x, dt):
+        '''Get point trajectory
+                
+        :param x (np.ndarray (n x 3 x N)): centreline coordinates
+        :param dt (float): timestep                
+        '''
+            
+        x_com = np.mean(x, axis = 2)
+            
+        v_com_vec = np.gradient(x_com, dt, axis=0, edge_order=1)    
+        v_com = np.sqrt(np.sum(v_com_vec**2, axis = 1))
+    
+        return x_com, v_com, v_com_vec 
+    
+    @staticmethod
+    def comp_com_velocity(x, t, Delta_T = 0.0):
+        '''
+        Computes centre of mass velocity 
+    
+        :param x (np.ndarray (n x 3 x N)): centreline coordinates
+        :param t (np.ndarray (n)): time stamps 
+        :param Delta_T (float): crop timepoints t < Delta_T
+        '''        
+        idx_arr = t >= Delta_T
+        t = t[idx_arr]
+        x = x[idx_arr, :]                
+        dt = t[1] - t[0]        
+        x_com = np.mean(x, axis = 2)            
+        v_com_vec = np.gradient(x_com, dt, axis=0, edge_order=1)    
+        v_com = np.linalg.norm(v_com_vec, axis = 1)
+        
+        return v_com, t
+    
+    @staticmethod
+    def comp_com(x, dt, Delta_T = 0.0):
         '''Compute mean centreline coordinates and its velocity as a function of time
                 
         :param x (np.ndarray (n x 3 x N)): centreline coordinates
@@ -69,6 +105,39 @@ class EPP(object):
         U = np.mean(v)
         
         return U 
+    
+    @staticmethod
+    def comp_projected_mean_swimming_speed(x, t, Delta_T):
+        '''
+        Computes average swimming speed projected onto the first principle axis
+        of centre of mass movement. This gives more accurate approximation of the 
+        average speed in cases where the centre of mass wobbles around the swimming
+        direction.
+        '''        
+        # crop initial transient
+        idx_arr = t >= Delta_T
+        dt = t[1]-t[0]
+        x = x[idx_arr,:]
+        t = t[idx_arr]
+                
+        x_com = x.mean(axis = 2)
+        lam, w, x_com_avg = EPP.com_pca(x_com)
+        
+        w1 = w[:, 0]
+        v = x_com[-1, :] - x_com[0, :]
+        v = v / np.linalg.norm(v)        
+        if np.dot(w1, v) < 0:
+            w1 = -w1
+                             
+        # Centre com around mean 
+        x_com -= x_com_avg[None, :]        
+        v_com_vec = np.gradient(x_com, dt, axis=0, edge_order=1)    
+        
+        # Project velocity on first principle direction
+        v_com = np.sum(v_com_vec * w1[None, :], axis = 1)                        
+        U = v_com.mean()
+        
+        return U, v_com, t 
     
     @staticmethod
     def comp_angle_of_attack(x, time, Delta_t = 0):
@@ -109,6 +178,29 @@ class EPP(object):
         return theta, avg_theta, t_avg_theta    
     
     @staticmethod
+    def com_pca(x_com):
+        '''
+        Computes principal directions and components
+        of the centreline centre of mass coordinates 
+                        
+        :param x_com (np.ndarray (3 x n)): centre of mass coordinates
+        '''
+        x_com = x_com.copy()        
+        # Centre coordinates around mean 
+        x_com_avg = x_com.mean(axis = 0)         
+        x_com -= x_com_avg[None, :]
+
+        C = np.matmul(x_com.T, x_com)            
+        lam, w =  np.linalg.eig(C)
+
+        # order from large to small
+        idx_arr = lam.argsort()[::-1]
+        lam = lam[idx_arr]        
+        w = w[:, idx_arr]
+
+        return lam, w, x_com_avg
+        
+    @staticmethod
     def centreline_pca(X):
         '''
         Computes principal directions and components
@@ -129,7 +221,7 @@ class EPP(object):
         C = np.matmul(X.T, X)            
         lam, w =  np.linalg.eig(C)
 
-        # order from big to small
+        # order from large to small
         idx_arr = lam.argsort()[::-1]
         lam = lam[idx_arr]        
         w = w[:, idx_arr]
