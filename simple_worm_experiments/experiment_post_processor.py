@@ -138,6 +138,23 @@ class EPP(object):
         U = v_com.mean()
         
         return U, v_com, t 
+
+    @staticmethod
+    def comp_mean_swimming_speed_simple(x, t, Delta_T):
+        '''
+        Computes average swimming speed by taking the com start and endpoint.
+        '''        
+        # crop initial transient
+        idx = np.abs(t - Delta_T).argmin()
+        t_start = t[idx]                
+        dt = t[1]-t[0]
+        
+        com_start = x[idx ,:].mean(axis = 1)
+        com_end = x[-1 ,:].mean(axis = 1)
+                                        
+        U = np.linalg.norm(com_end - com_start) / (t[-1] - t_start)
+        
+        return U 
     
     @staticmethod
     def comp_angle_of_attack(x, time, Delta_t = 0):
@@ -595,7 +612,6 @@ class EPP(object):
             energies[name] = cumulative_trapezoid(power, dx=dt, initial=0)       
        
         return energies
-        
         
         
         
