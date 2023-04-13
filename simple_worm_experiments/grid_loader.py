@@ -209,7 +209,7 @@ class GridLoader():
             h5 = self.save_data_pool(filepath,
                 FS_keys, CS_keys, overwrite, h5)
         else:
-            if dim == 0 and not self.PG.line:
+            if dim == 0:
                 h5 = self.save_data_pool_T(filepath, 
                     FS_keys, CS_keys, overwrite, h5)
             else:
@@ -288,7 +288,7 @@ class GridLoader():
         the grid.
         '''
         
-        if not PG.has_key('T'):
+        if not self.PG.has_key('T'):
             warnings.warn('ParameterGrid does not have T as a sweep key, ' 
                 'i.e. the simulation T is identical for all simulations,'
                 'use save_data instead!')
@@ -406,18 +406,26 @@ class GridLoader():
                 if k == 'FS':
                     arr_list = self.pad_arrays(arr_list, exit_status_arr)            
                     
-                # Pool results with the same simulation time T
-                for i, T in enumerate(T_arr):                                                        
-                    sub_arr_list = []                    
-                    
-                    for idx in self.PG.flat_index(self.PG[i, :]):
-                        sub_arr_list.append(arr_list[idx])                                                            
-                    
-                    key_grp.create_dataset(f'{T}', data = np.array(sub_arr_list))
-                    # Time stamps are identical for results associated with 
-                    # the same simulation time T, i.e. we only need to save them 
-                    # once for each iteration of the outer for loop
-                    t_list.append(output['t'][idx])
+                # If the parameter grid is one dimensional then we save the data 
+                # from each simulation in a separate file using the simulation 
+                # time T as the key                
+                if self.PG.line:
+                    for i, T in enumerate(T_arr):
+                        key_grp.create_dataset(f'{T}', data = arr_list[i])
+                        t_list.append(output['t'][i])                    
+                else:                    
+                    # Pool results with the same simulation time T
+                    for i, T in enumerate(T_arr):                                                        
+                        sub_arr_list = []                    
+                        
+                        for idx in self.PG.flat_index(self.PG[i, :]):
+                            sub_arr_list.append(arr_list[idx])                                                            
+                        
+                        key_grp.create_dataset(f'{T}', data = np.array(sub_arr_list))
+                        # Time stamps are identical for results associated with 
+                        # the same simulation time T, i.e. we only need to save them 
+                        # once for each iteration of the outer for loop
+                        t_list.append(output['t'][idx])
                                                 
         grp = h5.create_group('t')                 
         for t, T in zip(t_list, T_arr): grp.create_dataset(f'{T}', data = t)
