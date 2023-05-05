@@ -54,13 +54,13 @@ def default_model_parameter(as_dict = True):
         help = 'Radius at the tip of the head and tale')
                 
     # Material parameter
-    param.add_argument('--E', type = float, default = 1e5, 
+    param.add_argument('--E', type = float, default = 1.21e5, 
         help = "Young's modulus")
-    param.add_argument('--G', type = float, default = 1e5 / (2 * (1 + 0.5)), 
+    param.add_argument('--G', type = float, default = 1.21e5 / (2 * (1 + 0.5)), 
         help = 'Shear modulus')
-    param.add_argument('--eta', type = float, default = 1e-2 * 1e5, 
+    param.add_argument('--eta', type = float, default = 1e-2 * 1.21e5, 
         help = 'Extensional viscosity')
-    param.add_argument('--nu', type = float, default = 1e-2 * 1e5 / (2 * (1 + 0.5)), 
+    param.add_argument('--nu', type = float, default = 1e-2 * 1.21e5 / (2 * (1 + 0.5)), 
         help = 'Shear viscosity')
 
     # Muscle parameter 
