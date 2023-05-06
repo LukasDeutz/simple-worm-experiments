@@ -165,7 +165,7 @@ def T_keys_from_T(T_arr):
 
     T_idx_list = []
 
-    for T in T_arr:
+    for i, T in enumerate(T_arr):
     
         # If more than one simulation as simulation time T
         # then we add counter to T  
