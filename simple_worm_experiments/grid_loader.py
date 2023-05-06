@@ -421,6 +421,15 @@ class GridLoader():
                         for idx in self.PG.flat_index(self.PG[i, :]):
                             sub_arr_list.append(arr_list[idx])                                                            
                         
+                        # If more than one simulation as simulation time T
+                        # then we add counter to T  
+                        if np.count_nonzero(T == T_arr) > 1:
+                            T_idx = np.cumsum(T == T_arr)[i]                                                                                
+                            T_key = f'{T}_{T_idx}'                        
+                        # If not then we use T as a key
+                        else:
+                            T_key = f'{T}'
+                                                    
                         key_grp.create_dataset(f'{T}', data = np.array(sub_arr_list))
                         # Time stamps are identical for results associated with 
                         # the same simulation time T, i.e. we only need to save them 
