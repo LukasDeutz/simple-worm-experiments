@@ -466,7 +466,7 @@ class EPP(object):
     def powers_from_h5(h5, 
             t_start = None, 
             t_end = None,
-            T = None):
+            T_key = None):
         '''
         Returns dicitionary with powers from frame hdf5 file
         
@@ -476,8 +476,8 @@ class EPP(object):
             
         if t_start is not None or t_end is not None:        
 
-            if T is not None:
-                t = h5['t'][f'{T}'][:]            
+            if T_key is not None:
+                t = h5['t'][T_key][:]            
             else:
                 t = h5['t'][:]
 
@@ -490,8 +490,8 @@ class EPP(object):
                 
         for k, new_k in EPP.rename_powers.items():
             
-            if T is not None:
-                key_grp = h5['FS'][k][f'{T}']
+            if T_key is not None:
+                key_grp = h5['FS'][k][T_key]
             else:
                 key_grp = h5['FS'][k]
             
