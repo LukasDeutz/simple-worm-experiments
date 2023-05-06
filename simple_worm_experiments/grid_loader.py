@@ -9,7 +9,9 @@ import h5py
 import numpy as np
 import warnings
 
-from parameter_scan.util import load_grid_param, T_keys_from_T
+
+from simple_worm_experiments.util import T_keys_from_T
+from parameter_scan.util import load_grid_param 
 from parameter_scan import ParameterGrid
 
 class GridPoolLoader():
