@@ -9,7 +9,6 @@ import h5py
 import numpy as np
 import warnings
 
-
 from simple_worm_experiments.util import T_keys_from_T
 from parameter_scan.util import load_grid_param 
 from parameter_scan import ParameterGrid
@@ -433,7 +432,7 @@ class GridLoader():
                         t_list.append(output['t'][idx])
                                                 
         grp = h5.create_group('t')                 
-        for t, T in zip(t_list, T_arr): grp.create_dataset(f'{T}', data = t)
+        for t, T, T_key in zip(t_list, T_arr, T_key_list): grp.create_dataset(T_key, data = t)
                                                                             
         return h5        
             
