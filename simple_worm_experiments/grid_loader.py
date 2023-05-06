@@ -9,7 +9,7 @@ import h5py
 import numpy as np
 import warnings
 
-from parameter_scan.util import load_grid_param
+from parameter_scan.util import load_grid_param, T_keys_from_T
 from parameter_scan import ParameterGrid
 
 class GridPoolLoader():
@@ -390,6 +390,8 @@ class GridLoader():
         h5.create_dataset('exit_status', data = exit_status_arr) 
 
         T_arr = self.PG.v_from_key('T')
+        T_key_list = T_keys_from_T(T_arr)
+        
         h5.create_dataset('T', data = T_arr)
         
         t_list = []
@@ -420,17 +422,9 @@ class GridLoader():
                         
                         for idx in self.PG.flat_index(self.PG[i, :]):
                             sub_arr_list.append(arr_list[idx])                                                            
-                        
-                        # If more than one simulation as simulation time T
-                        # then we add counter to T  
-                        if np.count_nonzero(T == T_arr) > 1:
-                            T_idx = np.cumsum(T == T_arr)[i]                                                                                
-                            T_key = f'{T}_{T_idx}'                        
-                        # If not then we use T as a key
-                        else:
-                            T_key = f'{T}'
-                                                    
-                        key_grp.create_dataset(f'{T}', data = np.array(sub_arr_list))
+                            
+                        T_key = T_key_list[i]                                                                            
+                        key_grp.create_dataset(T_key, data = np.array(sub_arr_list))
                         # Time stamps are identical for results associated with 
                         # the same simulation time T, i.e. we only need to save them 
                         # once for each iteration of the outer for loop

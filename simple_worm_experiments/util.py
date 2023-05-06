@@ -160,6 +160,25 @@ def check_if_pic(data_path, PG):
     print(f'PI-solver converged at every time step of every simulation: {np.all(pic_arr.flatten())}')
     
     return np.all(pic_arr.flatten())
+     
+def T_keys_from_T(T_arr):
+
+    T_idx_list = []
+
+    for T in T_arr:
+    
+        # If more than one simulation as simulation time T
+        # then we add counter to T  
+        if np.count_nonzero(T == T_arr) > 1:
+            T_idx = np.cumsum(T == T_arr)[i]                                                                                
+            T_key = f'{T}_{T_idx}'                        
+        # If not then we use T as a key
+        else:
+            T_key = f'{T}'
+    
+        T_idx_list.append(T_key)
+        
+    return T_idx_list    
                    
 #===============================================================================
 # Post processing
